@@ -28,9 +28,9 @@ impl fmt::Display for Span {
 /// Different types of token available to GML.
 #[derive(PartialEq, Debug, Clone)]
 pub enum TokenKind {
-    Directive {
-        enable : bool,
-    },
+    DirectiveAllow,
+    DirectiveWarn,
+    DirectiveOption,
     LeftParen,
     RightParen,
     LeftBrace,

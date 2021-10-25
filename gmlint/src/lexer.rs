@@ -13,14 +13,6 @@ fn is_space(c : &char) -> bool {
     c.is_whitespace() && !is_newline(c) && !is_tab(c)
 }
 
-fn is_whitespace(c : &char) -> bool {
-    is_newline(c) || is_tab(c) || is_space(c)
-}
-
-fn is_not_whitespace(c : &char) -> bool {
-    !is_whitespace(c)
-}
-
 fn is_ascii_digit(c : &char) -> bool {
     c.is_ascii_digit()
 }
@@ -31,6 +23,10 @@ fn is_ascii_letter(c : &char) -> bool {
 
 fn is_ascii_graphic(c : &char) -> bool {
     is_ascii_letter(c) || is_ascii_digit(c) || matches!(c, '_')
+}
+
+fn is_ascii_graphic_kebab(c : &char) -> bool {
+    is_ascii_graphic(c) || matches!(c, '-')
 }
 
 fn is_hex_digit(c : &char) -> bool {
@@ -45,7 +41,7 @@ pub struct Lexer<'a> {
     chars : CharIndices<'a>,
     current_char : Option<char>,
     ignore_next_char : bool,
-    ignore_closing_directive : bool,
+    directive_mode : bool,
     span : Span,
 }
 
@@ -55,10 +51,10 @@ impl<'a> Lexer<'a> {
         let mut chars = src.char_indices();
         let current_char = chars.next().map(|x| x.1);
         let ignore_next_char = false;
-        let ignore_closing_directive = false;
+        let directive_mode = false;
         let span = Span::default();
         Self { src, chars, current_char,
-                ignore_next_char, ignore_closing_directive, span }
+                ignore_next_char, directive_mode, span }
     }
 
     /// Returns a reference to the current span.
@@ -115,79 +111,86 @@ impl<'a> Lexer<'a> {
             self.advance();
             self.ignore_next_char = false;
         }
-        if self.ignore_closing_directive {
-            loop {
-                if self.sat(|x| matches!(x, '*')) {
-                    self.advance();
-                    if self.sat(|x| matches!(x, '/')) {
-                        self.advance();
-                        break;
-                    }
-                } else if let None = self.advance() {
-                    break;
-                }
-            }
-            self.ignore_closing_directive = false;
-        }
         self.clear_span();
         if let Some(c) = self.advance() {
-            match c {
-                x if is_newline(&x) => {
-                    self.advance_while(is_newline);
-                    TokenKind::EoL
-                },
-                x if is_tab(&x) => {
-                    self.advance_while(is_tab);
-                    TokenKind::Tab
-                },
-                x if is_space(&x) => {
-                    self.advance_while(is_space);
-                    TokenKind::Space
-                },
-                '/' => if self.sat(|x| matches!(x, '/')) {
-                    self.advance();
-                    self.advance_while(|x| !is_newline(x));
-                    TokenKind::Other
-                } else if self.sat(|x| matches!(x, '*')) {
-                    self.advance();
-                    loop {
-                        if self.sat(|x| matches!(x, '*')) {
-                            self.advance();
-                            if self.sat(|x| matches!(x, '/')) {
-                                self.advance();
-                                break TokenKind::Other;
-                            }
-                        } else if let None = self.advance() {
-                            break TokenKind::Other;
+            if is_newline(&c) {
+                self.advance_while(is_newline);
+                TokenKind::EoL
+            } else if is_tab(&c) {
+                self.advance_while(is_tab);
+                TokenKind::Tab
+            } else if is_space(&c) {
+                self.advance_while(is_space);
+                TokenKind::Space
+            } else if self.directive_mode {
+                match c {
+                    '*' if self.sat(|x| matches!(x, '/')) => {
+                        self.advance();
+                        self.directive_mode = false;
+                        self.generate_token()
+                    },
+                    x if is_ascii_graphic_kebab(&x) => {
+                        self.advance_while(is_ascii_graphic_kebab);
+                        match self.substring() {
+                            "ALLOW" => TokenKind::DirectiveAllow,
+                            "WARN" => TokenKind::DirectiveWarn,
+                            _ => TokenKind::DirectiveOption,
                         }
-                    }
-                } else {
-                    TokenKind::Other
-                },
-                '(' => TokenKind::LeftParen,
-                ')' => TokenKind::RightParen,
-                '{' => TokenKind::LeftBrace,
-                '}' => TokenKind::RightBrace,
-                '[' => TokenKind::LeftBox,
-                ']' => TokenKind::RightBox,
-                '.' => TokenKind::Dot,
-                x if is_ascii_letter(&x) => {
-                    self.advance_while(is_ascii_graphic);
-                    if matches!(self.substring(), "var" | "static") {
-                        TokenKind::VarDecl
+                    },
+                    _ => TokenKind::Other,
+                }
+            } else {
+                match c {
+                    '/' => if self.sat(|x| matches!(x, '/')) {
+                        self.advance();
+                        self.advance_while(|x| !is_newline(x));
+                        TokenKind::Other
+                    } else if self.sat(|x| matches!(x, '*')) {
+                        self.advance();
+                        if self.sat(|x| matches!(x, '#')) {
+                            self.directive_mode = true;
+                            self.generate_token()
+                        } else {
+                            loop {
+                                if self.sat(|x| matches!(x, '*')) {
+                                    self.advance();
+                                    if self.sat(|x| matches!(x, '/')) {
+                                        self.advance();
+                                        break TokenKind::Other;
+                                    }
+                                } else if let None = self.advance() {
+                                    break TokenKind::Other;
+                                }
+                            }
+                        }
                     } else {
-                        TokenKind::Identifier
-                    }
-                },
-                x if is_ascii_digit(&x) => {
-                    if matches!(x, '0') && self.sat(|x| matches!(x, 'x')) {
-                        self.advance_while(is_hex_digit);
-                    } else {
-                        self.advance_while(is_ascii_digit);
-                    }
-                    TokenKind::Other
-                },
-                _ => TokenKind::Other,
+                        TokenKind::Other
+                    },
+                    '(' => TokenKind::LeftParen,
+                    ')' => TokenKind::RightParen,
+                    '{' => TokenKind::LeftBrace,
+                    '}' => TokenKind::RightBrace,
+                    '[' => TokenKind::LeftBox,
+                    ']' => TokenKind::RightBox,
+                    '.' => TokenKind::Dot,
+                    x if is_ascii_letter(&x) => {
+                        self.advance_while(is_ascii_graphic);
+                        if matches!(self.substring(), "var" | "static") {
+                            TokenKind::VarDecl
+                        } else {
+                            TokenKind::Identifier
+                        }
+                    },
+                    x if is_ascii_digit(&x) => {
+                        if matches!(x, '0') && self.sat(|x| matches!(x, 'x')) {
+                            self.advance_while(is_hex_digit);
+                        } else {
+                            self.advance_while(is_ascii_digit);
+                        }
+                        TokenKind::Other
+                    },
+                    _ => TokenKind::Other,
+                }
             }
         } else {
             TokenKind::EoF
