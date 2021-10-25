@@ -28,23 +28,21 @@ impl fmt::Display for Span {
 /// Different types of token available to GML.
 #[derive(PartialEq, Debug, Clone)]
 pub enum TokenKind {
+    Directive {
+        enable : bool,
+    },
     LeftParen,
     RightParen,
     LeftBrace,
     RightBrace,
     LeftBox,
     RightBox,
-    Colon,
-    SemiColon,
-    Comma,
     Dot,
-    Operator,
     VarDecl,
-    Literal,
-    Comment,
+    Identifier,
     Space,
     Tab,
     EoL,
     EoF,
-    Unknown,
+    Other,
 }
