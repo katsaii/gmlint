@@ -1,38 +1,29 @@
-use std::{ str::CharIndices, mem };
-use crate::token::{ Span, TokenKind };
+use std::{ str::CharIndices, mem, fmt };
+use crate::token::TokenKind;
 
-fn is_newline(c : &char) -> bool {
-    matches!(c, '\n' | '\r')
+/// The span of bytes for a token in a GML source file.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct Span {
+    pub begin : usize,
+    pub end : usize,
 }
 
-fn is_tab(c : &char) -> bool {
-    matches!(c, '\t')
+impl Span {
+    /// Creates a new span from these source positions.
+    pub fn new(begin : usize, end : usize) -> Self {
+        Self { begin, end }
+    }
+
+    /// Renders a substring using this span.
+    pub fn render<'a>(&self, src : &'a str) -> &'a str {
+        &src[self.begin..self.end]
+    }
 }
 
-fn is_space(c : &char) -> bool {
-    c.is_whitespace() && !is_newline(c) && !is_tab(c)
-}
-
-fn is_ascii_digit(c : &char) -> bool {
-    c.is_ascii_digit()
-}
-
-fn is_ascii_letter(c : &char) -> bool {
-    c.is_ascii_alphabetic()
-}
-
-fn is_ascii_graphic(c : &char) -> bool {
-    is_ascii_letter(c) || is_ascii_digit(c) || matches!(c, '_')
-}
-
-fn is_ascii_graphic_kebab(c : &char) -> bool {
-    is_ascii_graphic(c) || matches!(c, '-')
-}
-
-fn is_hex_digit(c : &char) -> bool {
-    is_ascii_digit(c) || matches!(c,
-            'a' | 'b' | 'c' | 'd' | 'e' | 'f' |
-            'A' | 'B' | 'C' | 'D' | 'E' | 'F')
+impl fmt::Display for Span {
+    fn fmt(&self, out : &mut fmt::Formatter) -> fmt::Result {
+        write!(out, "[{}..{}]", self.begin, self.end)
+    }
 }
 
 /// Converts a stream of characters into lexemes.
@@ -209,4 +200,38 @@ impl Into<Vec<TokenKind>> for Lexer<'_> {
             tokens.push(token);
         }
     }
+}
+
+fn is_newline(c : &char) -> bool {
+    matches!(c, '\n' | '\r')
+}
+
+fn is_tab(c : &char) -> bool {
+    matches!(c, '\t')
+}
+
+fn is_space(c : &char) -> bool {
+    c.is_whitespace() && !is_newline(c) && !is_tab(c)
+}
+
+fn is_ascii_digit(c : &char) -> bool {
+    c.is_ascii_digit()
+}
+
+fn is_ascii_letter(c : &char) -> bool {
+    c.is_ascii_alphabetic()
+}
+
+fn is_ascii_graphic(c : &char) -> bool {
+    is_ascii_letter(c) || is_ascii_digit(c) || matches!(c, '_')
+}
+
+fn is_ascii_graphic_kebab(c : &char) -> bool {
+    is_ascii_graphic(c) || matches!(c, '-')
+}
+
+fn is_hex_digit(c : &char) -> bool {
+    is_ascii_digit(c) || matches!(c,
+            'a' | 'b' | 'c' | 'd' | 'e' | 'f' |
+            'A' | 'B' | 'C' | 'D' | 'E' | 'F')
 }
