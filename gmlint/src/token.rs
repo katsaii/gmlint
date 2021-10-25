@@ -13,9 +13,11 @@ pub enum TokenKind {
     Dot,
     VarDecl,
     Identifier,
+    Comment,
     Space,
     Tab,
     EoL,
     EoF,
+    BoF,
     Other,
 }

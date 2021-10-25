@@ -135,7 +135,7 @@ impl<'a> Lexer<'a> {
                     '/' => if self.sat(|x| matches!(x, '/')) {
                         self.advance();
                         self.advance_while(|x| !is_newline(x));
-                        TokenKind::Other
+                        TokenKind::Comment
                     } else if self.sat(|x| matches!(x, '*')) {
                         self.advance();
                         if self.sat(|x| matches!(x, '#')) {
@@ -147,10 +147,10 @@ impl<'a> Lexer<'a> {
                                     self.advance();
                                     if self.sat(|x| matches!(x, '/')) {
                                         self.advance();
-                                        break TokenKind::Other;
+                                        break TokenKind::Comment;
                                     }
                                 } else if let None = self.advance() {
-                                    break TokenKind::Other;
+                                    break TokenKind::Comment;
                                 }
                             }
                         }

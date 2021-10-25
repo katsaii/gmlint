@@ -1,18 +1,121 @@
-use std::cmp;
+use std::{ cmp, fs, mem };
 use crate::{
     lexer::{ Lexer, Span },
     token::TokenKind
 };
 
-/// Performs some simple checks on this code.
-pub struct Checker<'a> {
-    src : &'a str,
-    lexer : Lexer<'a>,
-    lines : Vec<Span>,
+/// Performs checks on this file and prints errors to the standard output.
+pub fn check_file(filepath : &str, illegal_functions : &[String]) {
+    if let Ok(src) = fs::read_to_string(filepath) {
+        let checker = Checker::new(filepath, &src, illegal_functions);
+        checker.perform_checks();
+    }
 }
 
-/// Produces a sorted list of source positions where a new line occurs.
-pub fn prospect_newlines(src : &str) -> Vec<Span> {
+/// The type of indent style.
+#[derive(Debug, PartialEq)]
+pub enum IndentStyle {
+    Space,
+    Tab,
+    Unknown,
+}
+
+/// Performs some simple checks on this code.
+pub struct Checker<'a> {
+    filepath : String,
+    src : &'a str,
+    lines : Vec<Span>,
+    lexer : Lexer<'a>,
+    peeked : TokenKind,
+    peeked_span : Span,
+    illegal_functions : &'a [String],
+    directive_allow : bool,
+    indent_style : IndentStyle,
+}
+
+impl<'a> Checker<'a> {
+    /// Creates a new checker for this source file.
+    pub fn new(
+            filepath : &str,
+            src : &'a str,
+            illegal_functions : &'a [String]) -> Self {
+        let filepath = filepath.to_string();
+        let lines = prospect_newlines(src);
+        let lexer = Lexer::new(src);
+        let peeked = TokenKind::BoF;
+        let peeked_span = Span::default();
+        let directive_allow = false;
+        let indent_style = IndentStyle::Unknown;
+        Self { filepath, src, lines, lexer, peeked, peeked_span,
+                illegal_functions, directive_allow, indent_style }
+    }
+
+    /// Displays an error.
+    pub fn error(&self, reason : &str) {
+        display_error(&self.peeked_span, &self.lines,
+                self.src, &self.filepath, reason);
+    }
+
+    /// Skips whitespace and reports any changes in indentation.
+    pub fn generate_token(&mut self) -> TokenKind {
+        let mut newline = false;
+    'search:
+        loop {
+            self.peeked_span = self.lexer.span().clone();
+            let token = mem::replace(
+                    &mut self.peeked, self.lexer.generate_token());
+            match token {
+                TokenKind::EoL | TokenKind::BoF => {
+                    newline = true;
+                },
+                TokenKind::Comment => (),
+                TokenKind::Tab => {
+                    if self.indent_style == IndentStyle::Unknown {
+                        self.indent_style = IndentStyle::Tab;
+                    } else if newline {
+                        if self.indent_style == IndentStyle::Space {
+                            self.error("inconsistent-indent");
+                        }
+                    } else {
+                        self.error("tabs-before-newline");
+                    }
+                },
+                TokenKind::Space => {
+                    if self.indent_style == IndentStyle::Unknown {
+                        self.indent_style = IndentStyle::Space;
+                    } else if newline {
+                        if self.indent_style == IndentStyle::Tab {
+                            self.error("inconsistent-indent");
+                        }
+                    }
+                },
+                TokenKind::DirectiveAllow => {
+                    self.directive_allow = true;
+                },
+                TokenKind::DirectiveWarn => {
+                    self.directive_allow = false;
+                },
+                TokenKind::DirectiveOption => {
+                    let directive = self.lexer.substring();
+                    println!("{} {}", if self.directive_allow { "allow" } else { "warn" }, directive);
+                },
+                _ => break 'search token,
+            }
+        }
+    }
+
+    /// Runs the checks and consumes this checker.
+    pub fn perform_checks(mut self) {
+        loop {
+            let token = self.generate_token();
+            if matches!(token, TokenKind::EoF) {
+                break;
+            }
+        }
+    }
+}
+
+fn prospect_newlines(src : &str) -> Vec<Span> {
     let mut begin = 0;
     let mut locations = Vec::new();
     let mut chars = src.char_indices().peekable();
@@ -35,8 +138,8 @@ pub fn prospect_newlines(src : &str) -> Vec<Span> {
     locations
 }
 
-/// Searches an array of newline spans for a specific byte position, `pos`.
-pub fn binary_search_newlines(lines : &[Span], pos : usize) -> Result<usize, usize> {
+fn binary_search_newlines(
+        lines : &[Span], pos : usize) -> Result<usize, usize> {
     lines.binary_search_by(|x| {
         if x.begin > pos {
             cmp::Ordering::Greater
@@ -48,9 +151,8 @@ pub fn binary_search_newlines(lines : &[Span], pos : usize) -> Result<usize, usi
     })
 }
 
-/// Displays this error to the standard output.
-pub fn display_error(
-        span : Span,
+fn display_error(
+        span : &Span,
         lines : &[Span],
         src : &str,
         filepath : &str,

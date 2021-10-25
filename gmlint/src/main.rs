@@ -2,7 +2,9 @@ pub mod checker;
 pub mod lexer;
 pub mod token;
 
+use std::env;
+
 fn main() {
-    let tokens : Vec<_> = lexer::Lexer::new("a bc /*# hi hi */ 123").into();
-    println!("{:?}", tokens);
+    let args : Vec<String> = env::args().collect();
+    checker::check_file(&args[1], &[]);
 }
