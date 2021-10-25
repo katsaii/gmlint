@@ -11,6 +11,8 @@ pub enum TokenKind {
     LeftBox,
     RightBox,
     Dot,
+    Comma,
+    Hash,
     VarDecl,
     Identifier,
     Comment,

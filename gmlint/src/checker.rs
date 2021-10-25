@@ -1,4 +1,7 @@
-use std::{ cmp, fs, mem };
+use std::{
+    collections::{ HashSet },
+    cmp, fs, mem
+};
 use crate::{
     lexer::{ Lexer, Span },
     token::TokenKind
@@ -28,7 +31,7 @@ pub struct Checker<'a> {
     lexer : Lexer<'a>,
     peeked : TokenKind,
     peeked_span : Span,
-    illegal_functions : &'a [String],
+    illegal_functions : HashSet<String>,
     directive_allow : bool,
     indent_style : IndentStyle,
 }
@@ -38,16 +41,25 @@ impl<'a> Checker<'a> {
     pub fn new(
             filepath : &str,
             src : &'a str,
-            illegal_functions : &'a [String]) -> Self {
+            illegal_function_list : &'a [String]) -> Self {
         let filepath = filepath.to_string();
         let lines = prospect_newlines(src);
         let lexer = Lexer::new(src);
         let peeked = TokenKind::BoF;
         let peeked_span = Span::default();
+        let mut illegal_functions = HashSet::new();
         let directive_allow = false;
         let indent_style = IndentStyle::Unknown;
+        for name in illegal_function_list {
+            illegal_functions.insert(name.to_string());
+        }
         Self { filepath, src, lines, lexer, peeked, peeked_span,
                 illegal_functions, directive_allow, indent_style }
+    }
+
+    /// Returns the substring of the current span.
+    pub fn substring(&self) -> &'a str {
+        self.peeked_span.render(self.src)
     }
 
     /// Displays an error.
@@ -57,10 +69,10 @@ impl<'a> Checker<'a> {
     }
 
     /// Skips whitespace and reports any changes in indentation.
-    pub fn generate_token(&mut self) -> TokenKind {
+    /// Returns `None` if the end-of-file is reached.
+    pub fn generate_token(&mut self) -> Option<TokenKind> {
         let mut newline = false;
-    'search:
-        loop {
+        let token = loop {
             self.peeked_span = self.lexer.span().clone();
             let token = mem::replace(
                     &mut self.peeked, self.lexer.generate_token());
@@ -68,7 +80,7 @@ impl<'a> Checker<'a> {
                 TokenKind::EoL | TokenKind::BoF => {
                     newline = true;
                 },
-                TokenKind::Comment => (),
+                TokenKind::Comment | TokenKind::Other => (),
                 TokenKind::Tab => {
                     if !newline {
                         self.error("bad-tab-style",
@@ -98,19 +110,30 @@ impl<'a> Checker<'a> {
                     let directive = self.lexer.substring();
                     println!("{} {}", if self.directive_allow { "allow" } else { "warn" }, directive);
                 },
-                _ => break 'search token,
+                _ => break token,
             }
+        };
+        if matches!(token, TokenKind::EoF) {
+            None
+        } else {
+            Some(token)
         }
     }
 
     /// Runs the checks and consumes this checker.
-    pub fn perform_checks(mut self) {
+    pub fn perform_checks(mut self) -> Option<()> {
         loop {
-            let token = self.generate_token();
-            if matches!(token, TokenKind::EoF) {
-                break;
+            let token = self.generate_token()?;
+            match token {
+                TokenKind::Identifier => {
+                    if self.illegal_functions.contains(self.substring()) {
+                        self.error("illegal-functions", "Accessing this variable is prohibited");
+                    }
+                },
+                _ => (),
             }
         }
+        Some(())
     }
 }
 

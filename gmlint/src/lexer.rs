@@ -163,6 +163,7 @@ impl<'a> Lexer<'a> {
                     '[' => TokenKind::LeftBox,
                     ']' => TokenKind::RightBox,
                     '.' => TokenKind::Dot,
+                    '#' => TokenKind::Hash,
                     x if is_ascii_letter(&x) => {
                         self.advance_while(is_ascii_graphic);
                         if matches!(self.substring(), "var" | "static") {
