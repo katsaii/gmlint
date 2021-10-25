@@ -115,8 +115,7 @@ impl<'a> Lexer<'a> {
                 TokenKind::Space
             } else if self.directive_mode {
                 match c {
-                    '*' if self.sat(|x| matches!(x, '/')) => {
-                        self.advance();
+                    x if is_newline(&x) => {
                         self.directive_mode = false;
                         self.generate_token()
                     },
@@ -134,24 +133,24 @@ impl<'a> Lexer<'a> {
                 match c {
                     '/' => if self.sat(|x| matches!(x, '/')) {
                         self.advance();
-                        self.advance_while(|x| !is_newline(x));
-                        TokenKind::Comment
-                    } else if self.sat(|x| matches!(x, '*')) {
-                        self.advance();
                         if self.sat(|x| matches!(x, '#')) {
                             self.directive_mode = true;
                             self.generate_token()
                         } else {
-                            loop {
-                                if self.sat(|x| matches!(x, '*')) {
+                            self.advance_while(|x| !is_newline(x));
+                            TokenKind::Comment
+                        }
+                    } else if self.sat(|x| matches!(x, '*')) {
+                        self.advance();
+                        loop {
+                            if self.sat(|x| matches!(x, '*')) {
+                                self.advance();
+                                if self.sat(|x| matches!(x, '/')) {
                                     self.advance();
-                                    if self.sat(|x| matches!(x, '/')) {
-                                        self.advance();
-                                        break TokenKind::Comment;
-                                    }
-                                } else if let None = self.advance() {
                                     break TokenKind::Comment;
                                 }
+                            } else if let None = self.advance() {
+                                break TokenKind::Comment;
                             }
                         }
                     } else {

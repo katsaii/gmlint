@@ -51,9 +51,9 @@ impl<'a> Checker<'a> {
     }
 
     /// Displays an error.
-    pub fn error(&self, reason : &str) {
+    pub fn error(&self, option : &str, reason : &str) {
         display_error(&self.peeked_span, &self.lines,
-                self.src, &self.filepath, reason);
+                self.src, &self.filepath, option, reason);
     }
 
     /// Skips whitespace and reports any changes in indentation.
@@ -70,23 +70,22 @@ impl<'a> Checker<'a> {
                 },
                 TokenKind::Comment => (),
                 TokenKind::Tab => {
-                    if self.indent_style == IndentStyle::Unknown {
+                    if !newline {
+                        self.error("bad-tab-style",
+                                "Tab is used here when it shouldn't be");
+                    } else if self.indent_style == IndentStyle::Unknown {
                         self.indent_style = IndentStyle::Tab;
-                    } else if newline {
-                        if self.indent_style == IndentStyle::Space {
-                            self.error("inconsistent-indent");
-                        }
-                    } else {
-                        self.error("tabs-before-newline");
+                    } else if self.indent_style == IndentStyle::Space {
+                        self.error("inconsistent-indent",
+                                "Expected a space, but found a tab");
                     }
                 },
                 TokenKind::Space => {
                     if self.indent_style == IndentStyle::Unknown {
                         self.indent_style = IndentStyle::Space;
-                    } else if newline {
-                        if self.indent_style == IndentStyle::Tab {
-                            self.error("inconsistent-indent");
-                        }
+                    } else if newline && self.indent_style == IndentStyle::Tab {
+                        self.error("inconsistent-indent",
+                                "Expected a tab, but found a space");
                     }
                 },
                 TokenKind::DirectiveAllow => {
@@ -156,6 +155,7 @@ fn display_error(
         lines : &[Span],
         src : &str,
         filepath : &str,
+        option : &str,
         reason : &str) {
     let error_begin = span.begin;
     let error_end = span.end;
@@ -169,7 +169,7 @@ fn display_error(
     if indent_length == 0 {
         indent_length = 1;
     }
-    println!("\nWarning in {}:{}:{} -- {}", filepath, row, col, reason);
+    println!("\nWarning in {}:{}:{}", filepath, row, col);
     let indent = " ".repeat(indent_length);
     // underline error
     let mut underline_length = error_end - error_begin;
@@ -183,6 +183,8 @@ fn display_error(
         print!(" ... ({} line{} omitted)", lines_omitted,
                 if lines_omitted == 1 { "" } else { "s" });
     }
-    println!("\n {} |{}{}", indent, " ".repeat(col),
-            "^".repeat(underline_length));
+    println!("\n {} :{}{} {}", indent, " ".repeat(col),
+            "^".repeat(underline_length), reason);
+    println!(" {} ? If this is intentional, include `//# ALLOW {}` before line {}",
+            indent, option, row)
 }
