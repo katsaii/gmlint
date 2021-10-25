@@ -1,18 +1,44 @@
 use std::{
     collections::{ HashSet },
-    cmp, fs, mem
+    path::{ Path, PathBuf },
+    ffi::OsStr,
+    cmp, fs, mem, io,
 };
 use crate::{
     lexer::{ Lexer, Span },
     token::TokenKind
 };
 
+/// Recursively checks the GML files of a directory.
+pub fn check_project<P : AsRef<Path>>(
+        root : P,
+        illegal_functions : &[String]) -> io::Result<()> {
+    let entries = fs::read_dir(root)?;
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        let meta = fs::metadata(&path)?;
+        if meta.is_file() {
+            if let Some("gml") = path.extension().and_then(OsStr::to_str) {
+                check_file(path, illegal_functions);
+            }
+        } else if meta.is_dir() {
+            check_project(path, illegal_functions)?;
+        }
+    }
+    Ok(())
+}
+
 /// Performs checks on this file and prints errors to the standard output.
-pub fn check_file(filepath : &str, illegal_functions : &[String]) {
-    if let Ok(src) = fs::read_to_string(filepath) {
+pub fn check_file<P : AsRef<Path>>(
+        filepath : P,
+        illegal_functions : &[String]) -> io::Result<()> {
+    if let Some(filepath) = filepath.as_ref().to_str() {
+        let src = fs::read_to_string(filepath)?;
         let checker = Checker::new(filepath, &src, illegal_functions);
         checker.perform_checks();
     }
+    Ok(())
 }
 
 /// The type of indent style.
@@ -127,7 +153,8 @@ impl<'a> Checker<'a> {
             match token {
                 TokenKind::Identifier => {
                     if self.illegal_functions.contains(self.substring()) {
-                        self.error("illegal-functions", "Accessing this variable is prohibited");
+                        self.error("illegal-functions",
+                                "Accessing this variable is prohibited");
                     }
                 },
                 _ => (),
