@@ -1,0 +1,7 @@
+/tmp
+/target
+/resources
+**/*.rs.bk
+*.lock
+*.out
+katscript*
