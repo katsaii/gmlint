@@ -19,6 +19,11 @@ Warning in testfiles/bad-tab-style.gml:1:6
    :      ^ Tab is used here when it shouldn't be
    ? If this is intentional, include `//# ALLOW bad-tab-style` before line 1
 
+Warning in testfiles/bad-tab-style.gml:1:7
+ 1 | hello this is bad
+   :       ^^^^ Accessing this variable is prohibited, instead use `self`
+   ? If this is intentional, include `//# ALLOW banned-functions` before line 1
+
 Warning in testfiles/bad-tab-style.gml:1:14
  1 | hello this is bad
    :              ^ Tab is used here when it shouldn't be
@@ -29,45 +34,90 @@ Warning in testfiles/scripts/files-in-directories.gml:2:1
    : ^ Expected a tab, but found a space
    ? If this is intentional, include `//# ALLOW inconsistent-indentation` before line 2
 
+Warning in testfiles/scripts/idiomatic-gml.gml:4:17
+ 4 |  for (var i=0;i<array_length(buttons);i++) {
+   :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
+   ? If this is intentional, include `//# ALLOW banned-functions` before line 4
+
 Warning in testfiles/scripts/idiomatic-gml.gml:5:68
  5 |   if (gamepad_button_check_pressed(device,buttons[i])) return true; 
    :                                                                    ^ Tab is used here when it shouldn't be
    ? If this is intentional, include `//# ALLOW bad-tab-style` before line 5
+
+Warning in testfiles/scripts/idiomatic-gml.gml:11:17
+ 11 |  for (var i=0;i<array_length(buttons);i++) {
+    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 11
 
 Warning in testfiles/scripts/idiomatic-gml.gml:12:60
  12 |   if (gamepad_button_check(device,buttons[i])) return true; 
     :                                                            ^ Tab is used here when it shouldn't be
     ? If this is intentional, include `//# ALLOW bad-tab-style` before line 12
 
+Warning in testfiles/scripts/idiomatic-gml.gml:18:17
+ 18 |  for (var i=0;i<array_length(buttons);i++) {
+    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 18
+
 Warning in testfiles/scripts/idiomatic-gml.gml:19:69
  19 |   if (gamepad_button_check_released(device,buttons[i])) return true; 
     :                                                                     ^ Tab is used here when it shouldn't be
     ? If this is intentional, include `//# ALLOW bad-tab-style` before line 19
+
+Warning in testfiles/scripts/idiomatic-gml.gml:25:17
+ 25 |  for (var i=0;i<array_length(keys);i++) {
+    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 25
 
 Warning in testfiles/scripts/idiomatic-gml.gml:27:16
  27 |    return true; 
     :                ^ Tab is used here when it shouldn't be
     ? If this is intentional, include `//# ALLOW bad-tab-style` before line 27
 
+Warning in testfiles/scripts/idiomatic-gml.gml:34:17
+ 34 |  for (var i=0;i<array_length(keys);i++) {
+    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 34
+
 Warning in testfiles/scripts/idiomatic-gml.gml:36:16
  36 |    return true; 
     :                ^ Tab is used here when it shouldn't be
     ? If this is intentional, include `//# ALLOW bad-tab-style` before line 36
+
+Warning in testfiles/scripts/idiomatic-gml.gml:43:17
+ 43 |  for (var i=0;i<array_length(keys);i++) {
+    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 43
 
 Warning in testfiles/scripts/idiomatic-gml.gml:45:16
  45 |    return true; 
     :                ^ Tab is used here when it shouldn't be
     ? If this is intentional, include `//# ALLOW bad-tab-style` before line 45
 
+Warning in testfiles/scripts/idiomatic-gml.gml:56:7
+ 56 |   if (array_length(obj_input.controller_values)-1 < i) continue;
+    :       ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 56
+
 Warning in testfiles/scripts/idiomatic-gml.gml:57:30
  57 |   if (gamepad_is_connected(i) ) {
     :                              ^ Tab is used here when it shouldn't be
     ? If this is intentional, include `//# ALLOW bad-tab-style` before line 57
 
+Warning in testfiles/scripts/idiomatic-gml.gml:71:7
+ 71 |   if (array_length(obj_input.controller_values)-1 < i) continue;
+    :       ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 71
+
 Warning in testfiles/scripts/idiomatic-gml.gml:72:30
  72 |   if (gamepad_is_connected(i) ) {
     :                              ^ Tab is used here when it shouldn't be
     ? If this is intentional, include `//# ALLOW bad-tab-style` before line 72
+
+Warning in testfiles/scripts/idiomatic-gml.gml:96:7
+ 96 |   if (array_length(obj_input.controller_values)-1 < i) continue;
+    :       ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 96
 
 Warning in testfiles/scripts/idiomatic-gml.gml:97:30
  97 |   if (gamepad_is_connected(i) ) {
