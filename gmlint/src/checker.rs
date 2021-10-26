@@ -9,8 +9,20 @@ use crate::{
     token::TokenKind
 };
 
+/// Gets a list of the illegal functions and then uses it to check all the
+/// GML files in the project.
+pub fn check_project<P : AsRef<Path>>(root : P) -> io::Result<()> {
+    let illegal_functions =
+            fs::read_to_string(root.as_ref().join(".gmlint-functions"))?
+            .split('\n')
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>();
+    check_directory(root, &illegal_functions)?;
+    Ok(())
+}
+
 /// Recursively checks the GML files of a directory.
-pub fn check_project<P : AsRef<Path>>(
+pub fn check_directory<P : AsRef<Path>>(
         root : P,
         illegal_functions : &[String]) -> io::Result<()> {
     let entries = fs::read_dir(root)?;
@@ -23,7 +35,7 @@ pub fn check_project<P : AsRef<Path>>(
                 check_file(path, illegal_functions);
             }
         } else if meta.is_dir() {
-            check_project(path, illegal_functions)?;
+            check_directory(path, illegal_functions)?;
         }
     }
     Ok(())
