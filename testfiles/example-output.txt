@@ -1,0 +1,50 @@
+
+Warning in using-directives.gml:1:1
+ 1 | show_message
+   : ^^^^^^^^^^^^ Accessing this variable is prohibited
+   ? If this is intentional, include `//# ALLOW banned-functions` before line 1
+
+Warning in using-directives.gml:4:1
+ 4 | show_message();
+   : ^^^^^^^^^^^^ Accessing this variable is prohibited
+   ? If this is intentional, include `//# ALLOW banned-functions` before line 4
+
+Warning in using-directives.gml:7:9
+ 7 | var a = show_message;
+   :         ^^^^^^^^^^^^ Accessing this variable is prohibited
+   ? If this is intentional, include `//# ALLOW banned-functions` before line 7
+
+Warning in using-directives.gml:12:3
+ 12 |   show_message'
+    :   ^^^^^^^^^^^^ Accessing this variable is prohibited
+    ? If this is intentional, include `//# ALLOW banned-functions` before line 12
+
+Warning in bad-tab-style.gml:1:6
+ 1 | hello this is bad
+   :      ^ Tab is used here when it shouldn't be
+   ? If this is intentional, include `//# ALLOW bad-tab-style` before line 1
+
+Warning in bad-tab-style.gml:1:14
+ 1 | hello this is bad
+   :              ^ Tab is used here when it shouldn't be
+   ? If this is intentional, include `//# ALLOW bad-tab-style` before line 1
+
+Warning in files-in-directories.gml:2:1
+ 2 |  uwu
+   : ^ Expected a tab, but found a space
+   ? If this is intentional, include `//# ALLOW inconsistent-indentation` before line 2
+
+Warning in inconsistent-indentation.gml:5:1
+ 5 |  e
+   : ^ Expected a space, but found a tab
+   ? If this is intentional, include `//# ALLOW inconsistent-indentation` before line 5
+
+Warning in inconsistent-indentation.gml:6:1
+ 6 |      f
+   : ^ Expected a space, but found a tab
+   ? If this is intentional, include `//# ALLOW inconsistent-indentation` before line 6
+
+Warning in inconsistent-indentation.gml:6:4
+ 6 |      f
+   :    ^ Expected a space, but found a tab
+   ? If this is intentional, include `//# ALLOW inconsistent-indentation` before line 6
