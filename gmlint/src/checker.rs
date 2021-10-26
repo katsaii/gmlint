@@ -1,5 +1,5 @@
 use std::{
-    collections::{ HashSet },
+    collections::{ HashSet, HashMap },
     path::Path, ffi::OsStr,
     io::{ self as io, BufRead },
     cmp, fs, mem, env,
@@ -80,6 +80,7 @@ pub struct Checker<'a> {
     illegal_functions : HashSet<String>,
     directive_allow : bool,
     indent_style : IndentStyle,
+    directives : HashMap<String, bool>,
 }
 
 impl<'a> Checker<'a> {
@@ -99,8 +100,10 @@ impl<'a> Checker<'a> {
         for name in illegal_function_list {
             illegal_functions.insert(name.to_string());
         }
+        let directives = HashMap::new();
         Self { filepath, src, lines, lexer, peeked, peeked_span,
-                illegal_functions, directive_allow, indent_style }
+                illegal_functions, directive_allow, indent_style,
+                directives }
     }
 
     /// Returns the substring of the current span.
@@ -110,8 +113,11 @@ impl<'a> Checker<'a> {
 
     /// Displays an error.
     pub fn error(&self, option : &str, reason : &str) {
-        display_error(&self.peeked_span, &self.lines,
-                self.src, &self.filepath, option, reason);
+        let enabled = !matches!(self.directives.get(option), Some(false));
+        if enabled {
+            display_error(&self.peeked_span, &self.lines,
+                    self.src, &self.filepath, option, reason);
+        }
     }
 
     /// Skips whitespace and reports any changes in indentation.
@@ -154,7 +160,7 @@ impl<'a> Checker<'a> {
                 },
                 TokenKind::DirectiveOption => {
                     let directive = self.substring();
-                    println!("{} {}", if self.directive_allow { "allow" } else { "warn" }, directive);
+                    self.directives.insert(directive.to_string(), self.directive_allow);
                 },
                 _ => break token,
             }
