@@ -24,14 +24,16 @@ pub fn check_project<P : AsRef<Path>>(root : P) -> io::Result<()> {
     } else {
         vec![]
     };
-    check_directory(root_dir, &illegal_functions)?;
+    let directives = vec![];
+    check_directory(root_dir, &illegal_functions, &directives)?;
     Ok(())
 }
 
 /// Recursively checks the GML files of a directory.
 pub fn check_directory<P : AsRef<Path>>(
         root : P,
-        illegal_functions : &[String]) -> io::Result<()> {
+        illegal_functions : &[String],
+        directives : &[(String, bool)]) -> io::Result<()> {
     let entries = fs::read_dir(root)?;
     for entry in entries {
         let entry = entry?;
@@ -39,10 +41,10 @@ pub fn check_directory<P : AsRef<Path>>(
         let meta = fs::metadata(&path)?;
         if meta.is_file() {
             if let Some("gml") = path.extension().and_then(OsStr::to_str) {
-                check_file(path, illegal_functions)?;
+                check_file(path, illegal_functions, directives)?;
             }
         } else if meta.is_dir() {
-            check_directory(path, illegal_functions)?;
+            check_directory(path, illegal_functions, directives)?;
         }
     }
     Ok(())
@@ -51,11 +53,12 @@ pub fn check_directory<P : AsRef<Path>>(
 /// Performs checks on this file and prints errors to the standard output.
 pub fn check_file<P : AsRef<Path>>(
         filepath : P,
-        illegal_functions : &[String]) -> io::Result<()> {
+        illegal_functions : &[String],
+        directives : &[(String, bool)]) -> io::Result<()> {
     if let Some(filename) = filepath.as_ref().file_name().and_then(OsStr::to_str) {
         let filename = filename.to_string();
         let src = fs::read_to_string(filepath)?;
-        let checker = Checker::new(&filename, &src, illegal_functions);
+        let checker = Checker::new(&filename, &src, illegal_functions, directives);
         checker.perform_checks();
     }
     Ok(())
@@ -88,7 +91,8 @@ impl<'a> Checker<'a> {
     pub fn new(
             filepath : &str,
             src : &'a str,
-            illegal_function_list : &'a [String]) -> Self {
+            illegal_function_list : &'a [String],
+            directive_list : &[(String, bool)]) -> Self {
         let filepath = filepath.to_string();
         let lines = prospect_newlines(src);
         let lexer = Lexer::new(src);
@@ -100,7 +104,10 @@ impl<'a> Checker<'a> {
         for name in illegal_function_list {
             illegal_functions.insert(name.to_string());
         }
-        let directives = HashMap::new();
+        let directives = directive_list
+                .into_iter()
+                .map(|x| x.clone())
+                .collect();
         Self { filepath, src, lines, lexer, peeked, peeked_span,
                 illegal_functions, directive_allow, indent_style,
                 directives }
@@ -179,7 +186,7 @@ impl<'a> Checker<'a> {
             match token {
                 TokenKind::Identifier => {
                     if self.illegal_functions.contains(self.substring()) {
-                        self.error("illegal-functions",
+                        self.error("banned-functions",
                                 "Accessing this variable is prohibited");
                     }
                 },

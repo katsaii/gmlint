@@ -1,0 +1,6 @@
+allow:
+ - "inconsistent-indentation"
+warn:
+ - "banned-functions"
+banned:
+ - show_message
