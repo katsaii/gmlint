@@ -153,7 +153,7 @@ impl<'a> Checker<'a> {
                     self.directive_allow = false;
                 },
                 TokenKind::DirectiveOption => {
-                    let directive = self.lexer.substring();
+                    let directive = self.substring();
                     println!("{} {}", if self.directive_allow { "allow" } else { "warn" }, directive);
                 },
                 _ => break token,

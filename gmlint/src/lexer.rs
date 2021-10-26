@@ -106,6 +106,9 @@ impl<'a> Lexer<'a> {
         if let Some(c) = self.advance() {
             if is_newline(&c) {
                 self.advance_while(is_newline);
+                if self.directive_mode {
+                    self.directive_mode = false;
+                }
                 TokenKind::EoL
             } else if is_tab(&c) {
                 self.advance_while(is_tab);
@@ -115,10 +118,6 @@ impl<'a> Lexer<'a> {
                 TokenKind::Space
             } else if self.directive_mode {
                 match c {
-                    x if is_newline(&x) => {
-                        self.directive_mode = false;
-                        self.generate_token()
-                    },
                     x if is_ascii_graphic_kebab(&x) => {
                         self.advance_while(is_ascii_graphic_kebab);
                         match self.substring() {
