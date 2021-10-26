@@ -1,30 +1,57 @@
 use std::{
     collections::{ HashSet, HashMap },
     path::Path, ffi::OsStr,
-    io::{ self as io, BufRead },
-    cmp, fs, mem, env,
+    cmp, fs, mem, env, io,
 };
 use crate::{
     lexer::{ Lexer, Span },
     token::TokenKind
 };
+use yaml_rust::YamlLoader;
+
+/// Loads the banned function list and global directive options from a Yaml file.
+pub fn load_config<P : AsRef<Path>>(root : P)
+        -> Option<(Vec<String>, Vec<(String, bool)>)> {
+    let mut illegal_functions = Vec::new();
+    let mut directives = Vec::new();
+    match fs::read_to_string(root.as_ref().join("gmlint.yaml")) {
+        Ok(yaml_content) => {
+            match YamlLoader::load_from_str(&yaml_content) {
+                Ok(yaml) => {
+                    if yaml.len() >= 1 {
+                        let doc = &yaml[0];
+                        if let Some(names) = doc["banned"].as_vec() {
+                            for name in names {
+                                illegal_functions.push(name.as_str()?.to_string());
+                            }
+                        }
+                        if let Some(names) = doc["allow"].as_vec() {
+                            for name in names {
+                                directives.push((name.as_str()?.to_string(), false));
+                            }
+                        }
+                        if let Some(names) = doc["warn"].as_vec() {
+                            for name in names {
+                                directives.push((name.as_str()?.to_string(), true));
+                            }
+                        }
+                    }
+                },
+                Err(e) => println!("failed to load config correctly:\n{}", e),
+            }
+        },
+        Err(e) => println!("missing config file `gmlint.yaml` in root:\n{}", e),
+    }
+    Some((illegal_functions, directives))
+}
 
 /// Gets a list of the illegal functions and then uses it to check all the
 /// GML files in the project.
 pub fn check_project<P : AsRef<Path>>(root : P) -> io::Result<()> {
     let mut root_dir = env::current_dir()?;
     root_dir.push(root);
-    let illegal_functions = if let Ok(file) =
-            fs::File::open(root_dir.join(".gmlint-functions")) {
-        let reader = io::BufReader::new(file);
-        reader.lines()
-                .filter_map(|x|
-                        if let Ok(x) = x { Some(x.to_string()) } else { None })
-                .collect::<Vec<_>>()
-    } else {
-        vec![]
-    };
-    let directives = vec![];
+    let (illegal_functions, directives) =
+            load_config(&root_dir).unwrap_or((vec![], vec![]));
     check_directory(root_dir, &illegal_functions, &directives)?;
     Ok(())
 }
@@ -147,7 +174,7 @@ impl<'a> Checker<'a> {
                     } else if self.indent_style == IndentStyle::Unknown {
                         self.indent_style = IndentStyle::Tab;
                     } else if self.indent_style == IndentStyle::Space {
-                        self.error("inconsistent-indent",
+                        self.error("inconsistent-indentation",
                                 "Expected a space, but found a tab");
                     }
                 },
@@ -155,7 +182,7 @@ impl<'a> Checker<'a> {
                     if self.indent_style == IndentStyle::Unknown {
                         self.indent_style = IndentStyle::Space;
                     } else if newline && self.indent_style == IndentStyle::Tab {
-                        self.error("inconsistent-indent",
+                        self.error("inconsistent-indentation",
                                 "Expected a tab, but found a space");
                     }
                 },
