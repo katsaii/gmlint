@@ -163,6 +163,23 @@ impl<'a> Lexer<'a> {
                     ']' => TokenKind::RightBox,
                     '.' => TokenKind::Dot,
                     '#' => TokenKind::Hash,
+                    '"' => {
+                        loop {
+                            if self.sat(|x| matches!(x, '\\')) {
+                                self.advance();
+                            } else if self.sat(|x| matches!(x, '"')) {
+                                self.ignore_next_char = true;
+                                break TokenKind::Other;
+                            }
+                            if let None = self.advance() {
+                                break TokenKind::Other;
+                            }
+                        }
+                    },
+                    '@' if self.sat(|x| matches!(x, '\'')) => {
+                        self.advance_while(|x| !matches!(x, '\''));
+                        TokenKind::Other
+                    },
                     x if is_ascii_letter(&x) => {
                         self.advance_while(is_ascii_graphic);
                         if matches!(self.substring(), "var" | "static") {
