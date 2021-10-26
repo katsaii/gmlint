@@ -9,7 +9,8 @@ use crate::{
 };
 use yaml_rust::YamlLoader;
 
-/// Loads the banned function list and global directive options from a Yaml file.
+/// Loads the banned function list and global directive options from a
+/// YAML file.
 pub fn load_config<P : AsRef<Path>>(root : P)
         -> Option<(Vec<String>, Vec<(String, bool)>)> {
     let mut illegal_functions = Vec::new();
@@ -22,17 +23,20 @@ pub fn load_config<P : AsRef<Path>>(root : P)
                         let doc = &yaml[0];
                         if let Some(names) = doc["banned"].as_vec() {
                             for name in names {
-                                illegal_functions.push(name.as_str()?.to_string());
+                                illegal_functions.push(
+                                        name.as_str()?.to_string());
                             }
                         }
                         if let Some(names) = doc["allow"].as_vec() {
                             for name in names {
-                                directives.push((name.as_str()?.to_string(), false));
+                                directives.push(
+                                        (name.as_str()?.to_string(), false));
                             }
                         }
                         if let Some(names) = doc["warn"].as_vec() {
                             for name in names {
-                                directives.push((name.as_str()?.to_string(), true));
+                                directives.push(
+                                        (name.as_str()?.to_string(), true));
                             }
                         }
                     }
@@ -40,7 +44,8 @@ pub fn load_config<P : AsRef<Path>>(root : P)
                 Err(e) => println!("failed to load config correctly:\n{}", e),
             }
         },
-        Err(e) => println!("missing config file `gmlint.yaml` in root:\n{}", e),
+        Err(e) => println!(
+                "missing config file `gmlint.yaml` in root:\n{}", e),
     }
     Some((illegal_functions, directives))
 }
@@ -82,10 +87,12 @@ pub fn check_file<P : AsRef<Path>>(
         filepath : P,
         illegal_functions : &[String],
         directives : &[(String, bool)]) -> io::Result<()> {
-    if let Some(filename) = filepath.as_ref().file_name().and_then(OsStr::to_str) {
+    if let Some(filename) =
+            filepath.as_ref().file_name().and_then(OsStr::to_str) {
         let filename = filename.to_string();
         let src = fs::read_to_string(filepath)?;
-        let checker = Checker::new(&filename, &src, illegal_functions, directives);
+        let checker = Checker::new(
+                &filename, &src, illegal_functions, directives);
         checker.perform_checks();
     }
     Ok(())
@@ -179,9 +186,11 @@ impl<'a> Checker<'a> {
                     }
                 },
                 TokenKind::Space => {
-                    if self.indent_style == IndentStyle::Unknown {
+                    if !newline {
+                        // ignore
+                    } else if self.indent_style == IndentStyle::Unknown {
                         self.indent_style = IndentStyle::Space;
-                    } else if newline && self.indent_style == IndentStyle::Tab {
+                    } else if self.indent_style == IndentStyle::Tab {
                         self.error("inconsistent-indentation",
                                 "Expected a tab, but found a space");
                     }
@@ -194,7 +203,8 @@ impl<'a> Checker<'a> {
                 },
                 TokenKind::DirectiveOption => {
                     let directive = self.substring();
-                    self.directives.insert(directive.to_string(), self.directive_allow);
+                    self.directives.insert(
+                            directive.to_string(), self.directive_allow);
                 },
                 _ => break token,
             }
@@ -298,6 +308,6 @@ fn display_error(
     }
     println!("\n {} :{}{} {}", indent, " ".repeat(col),
             "^".repeat(underline_length), reason);
-    println!(" {} ? If this is intentional, include `//# ALLOW {}` before line {}",
-            indent, option, row)
+    print!(" {} ? If this is intentional, ", indent);
+    println!("include `//# ALLOW {}` before line {}", option, row);
 }
