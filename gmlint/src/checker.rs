@@ -1,8 +1,7 @@
 use std::{
     collections::{ HashSet },
-    path::{ Path, PathBuf },
-    ffi::OsStr,
-    cmp, fs, mem, io,
+    path::Path, ffi::OsStr,
+    cmp, fs, mem, io, env,
 };
 use crate::{
     lexer::{ Lexer, Span },
@@ -12,12 +11,17 @@ use crate::{
 /// Gets a list of the illegal functions and then uses it to check all the
 /// GML files in the project.
 pub fn check_project<P : AsRef<Path>>(root : P) -> io::Result<()> {
-    let illegal_functions =
-            fs::read_to_string(root.as_ref().join(".gmlint-functions"))?
-            .split('\n')
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>();
-    check_directory(root, &illegal_functions)?;
+    let mut root_dir = env::current_dir()?;
+    root_dir.push(root);
+    let illegal_functions = if let Ok(content) =
+            fs::read_to_string(root_dir.join(".gmlint-functions")) {
+        content.split('\n')
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
+    check_directory(root_dir, &illegal_functions)?;
     Ok(())
 }
 
@@ -32,7 +36,7 @@ pub fn check_directory<P : AsRef<Path>>(
         let meta = fs::metadata(&path)?;
         if meta.is_file() {
             if let Some("gml") = path.extension().and_then(OsStr::to_str) {
-                check_file(path, illegal_functions);
+                check_file(path, illegal_functions)?;
             }
         } else if meta.is_dir() {
             check_directory(path, illegal_functions)?;
@@ -45,9 +49,10 @@ pub fn check_directory<P : AsRef<Path>>(
 pub fn check_file<P : AsRef<Path>>(
         filepath : P,
         illegal_functions : &[String]) -> io::Result<()> {
-    if let Some(filepath) = filepath.as_ref().to_str() {
+    if let Some(filename) = filepath.as_ref().file_name().and_then(OsStr::to_str) {
+        let filename = filename.to_string();
         let src = fs::read_to_string(filepath)?;
-        let checker = Checker::new(filepath, &src, illegal_functions);
+        let checker = Checker::new(&filename, &src, illegal_functions);
         checker.perform_checks();
     }
     Ok(())
@@ -172,7 +177,6 @@ impl<'a> Checker<'a> {
                 _ => (),
             }
         }
-        Some(())
     }
 }
 
