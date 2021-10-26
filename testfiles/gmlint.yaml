@@ -1,2 +1,4 @@
 banned:
  - show_message
+ - [this, self]
+ - [array_length]

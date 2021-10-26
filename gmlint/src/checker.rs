@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     path::Path, ffi::OsStr,
-    cmp, fs, mem, env, io,
+    cmp, fs, mem, env, io, fmt,
 };
 use crate::{
     lexer::{ Lexer, Span },
@@ -21,10 +21,23 @@ pub fn load_config<P : AsRef<Path>>(root : P)
                 Ok(yaml) => {
                     if yaml.len() >= 1 {
                         let doc = &yaml[0];
-                        if let Some(names) = doc["banned"].as_vec() {
-                            for name in names {
-                                illegal_functions.push(
-                                        (name.as_str()?.to_string(), None));
+                        if let Some(fields) = doc["banned"].as_vec() {
+                            for field in fields {
+                                let arg = if let Some(name) = field.as_str() {
+                                    (name.to_string(), None)
+                                } else {
+                                    // getting the replacement function name
+                                    let pair = field.as_vec()?;
+                                    match pair.len() {
+                                        0 => continue,
+                                        1 => (pair[0].as_str()?.to_string(),
+                                                None),
+                                        _ => (pair[0].as_str()?.to_string(),
+                                                Some(pair[1].as_str()?
+                                                        .to_string())),
+                                    }
+                                };
+                                illegal_functions.push(arg);
                             }
                         }
                         if let Some(names) = doc["allow"].as_vec() {
@@ -153,7 +166,7 @@ impl<'a> Checker<'a> {
     }
 
     /// Displays an error.
-    pub fn error(&self, option : &str, reason : &str) {
+    pub fn error<T : fmt::Display>(&self, option : &str, reason : T) {
         let enabled = !matches!(self.directives.get(option), Some(false));
         if enabled == directive_enabled_by_default(option) {
             display_error(&self.peeked_span, &self.lines,
@@ -222,9 +235,16 @@ impl<'a> Checker<'a> {
             let token = self.generate_token()?;
             match token {
                 TokenKind::Identifier => {
-                    if self.illegal_functions.contains_key(self.substring()) {
+                    if let Some(replacement) =
+                            self.illegal_functions.get(self.substring()) {
+                        let extra_message = if let Some(name) = replacement {
+                            format!(", instead use `{}`", name)
+                        } else {
+                            String::new()
+                        };
                         self.error("banned-functions",
-                                "Accessing this variable is prohibited");
+                                format!("Accessing this variable is \
+                                        prohibited{}", extra_message));
                     }
                 },
                 _ => (),
@@ -273,13 +293,13 @@ fn binary_search_newlines(
     })
 }
 
-fn display_error(
+fn display_error<T : fmt::Display>(
         span : &Span,
         lines : &[Span],
         src : &str,
         filepath : &str,
         option : &str,
-        reason : &str) {
+        reason : T) {
     let error_begin = span.begin;
     let error_end = span.end;
     let line_begin = binary_search_newlines(&lines, error_begin).unwrap();
