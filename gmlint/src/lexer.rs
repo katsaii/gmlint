@@ -177,7 +177,9 @@ impl<'a> Lexer<'a> {
                         }
                     },
                     '@' if self.sat(|x| matches!(x, '\'')) => {
+                        self.advance();
                         self.advance_while(|x| !matches!(x, '\''));
+                        self.ignore_next_char = true;
                         TokenKind::Other
                     },
                     x if is_ascii_letter(&x) => {

@@ -14,11 +14,6 @@ Warning in using-directives.gml:7:9
    :         ^^^^^^^^^^^^ Accessing this variable is prohibited
    ? If this is intentional, include `//# ALLOW banned-functions` before line 7
 
-Warning in using-directives.gml:12:3
- 12 |   show_message'
-    :   ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? If this is intentional, include `//# ALLOW banned-functions` before line 12
-
 Warning in bad-tab-style.gml:1:6
  1 | hello this is bad
    :      ^ Tab is used here when it shouldn't be
