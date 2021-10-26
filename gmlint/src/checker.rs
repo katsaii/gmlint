@@ -87,9 +87,9 @@ pub fn check_file<P : AsRef<Path>>(
         filepath : P,
         illegal_functions : &[String],
         directives : &[(String, bool)]) -> io::Result<()> {
-    if let Some(filename) =
-            filepath.as_ref().file_name().and_then(OsStr::to_str) {
-        let filename = filename.to_string();
+    if let Some(filepath_rel) =
+            pathdiff::diff_paths(&filepath, env::current_dir()?) {
+        let filename = filepath_rel.to_str().unwrap_or("").to_string();
         let src = fs::read_to_string(filepath)?;
         let checker = Checker::new(
                 &filename, &src, illegal_functions, directives);
