@@ -114,7 +114,7 @@ impl<'a> Checker<'a> {
     /// Displays an error.
     pub fn error(&self, option : &str, reason : &str) {
         let enabled = !matches!(self.directives.get(option), Some(false));
-        if enabled {
+        if enabled == directive_enabled_by_default(option) {
             display_error(&self.peeked_span, &self.lines,
                     self.src, &self.filepath, option, reason);
         }
@@ -187,6 +187,10 @@ impl<'a> Checker<'a> {
             }
         }
     }
+}
+
+fn directive_enabled_by_default(directive : &str) -> bool {
+    !matches!(directive, "")
 }
 
 fn prospect_newlines(src : &str) -> Vec<Span> {
