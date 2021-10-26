@@ -1,7 +1,8 @@
 use std::{
     collections::{ HashSet },
     path::Path, ffi::OsStr,
-    cmp, fs, mem, io, env,
+    io::{ self as io, BufRead },
+    cmp, fs, mem, env,
 };
 use crate::{
     lexer::{ Lexer, Span },
@@ -13,10 +14,12 @@ use crate::{
 pub fn check_project<P : AsRef<Path>>(root : P) -> io::Result<()> {
     let mut root_dir = env::current_dir()?;
     root_dir.push(root);
-    let illegal_functions = if let Ok(content) =
-            fs::read_to_string(root_dir.join(".gmlint-functions")) {
-        content.split('\n')
-                .map(|x| x.to_string())
+    let illegal_functions = if let Ok(file) =
+            fs::File::open(root_dir.join(".gmlint-functions")) {
+        let reader = io::BufReader::new(file);
+        reader.lines()
+                .filter_map(|x|
+                        if let Ok(x) = x { Some(x.to_string()) } else { None })
                 .collect::<Vec<_>>()
     } else {
         vec![]
