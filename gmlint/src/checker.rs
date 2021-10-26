@@ -1,5 +1,5 @@
 use std::{
-    collections::{ HashSet, HashMap },
+    collections::HashMap,
     path::Path, ffi::OsStr,
     cmp, fs, mem, env, io,
 };
@@ -12,7 +12,7 @@ use yaml_rust::YamlLoader;
 /// Loads the banned function list and global directive options from a
 /// YAML file.
 pub fn load_config<P : AsRef<Path>>(root : P)
-        -> Option<(Vec<String>, Vec<(String, bool)>)> {
+        -> Option<(Vec<(String, Option<String>)>, Vec<(String, bool)>)> {
     let mut illegal_functions = Vec::new();
     let mut directives = Vec::new();
     match fs::read_to_string(root.as_ref().join("gmlint.yaml")) {
@@ -24,7 +24,7 @@ pub fn load_config<P : AsRef<Path>>(root : P)
                         if let Some(names) = doc["banned"].as_vec() {
                             for name in names {
                                 illegal_functions.push(
-                                        name.as_str()?.to_string());
+                                        (name.as_str()?.to_string(), None));
                             }
                         }
                         if let Some(names) = doc["allow"].as_vec() {
@@ -64,7 +64,7 @@ pub fn check_project<P : AsRef<Path>>(root : P) -> io::Result<()> {
 /// Recursively checks the GML files of a directory.
 pub fn check_directory<P : AsRef<Path>>(
         root : P,
-        illegal_functions : &[String],
+        illegal_functions : &[(String, Option<String>)],
         directives : &[(String, bool)]) -> io::Result<()> {
     let entries = fs::read_dir(root)?;
     for entry in entries {
@@ -85,7 +85,7 @@ pub fn check_directory<P : AsRef<Path>>(
 /// Performs checks on this file and prints errors to the standard output.
 pub fn check_file<P : AsRef<Path>>(
         filepath : P,
-        illegal_functions : &[String],
+        illegal_functions : &[(String, Option<String>)],
         directives : &[(String, bool)]) -> io::Result<()> {
     if let Some(filepath_rel) =
             pathdiff::diff_paths(&filepath, env::current_dir()?) {
@@ -114,7 +114,7 @@ pub struct Checker<'a> {
     lexer : Lexer<'a>,
     peeked : TokenKind,
     peeked_span : Span,
-    illegal_functions : HashSet<String>,
+    illegal_functions : HashMap<String, Option<String>>,
     directive_allow : bool,
     indent_style : IndentStyle,
     directives : HashMap<String, bool>,
@@ -125,19 +125,19 @@ impl<'a> Checker<'a> {
     pub fn new(
             filepath : &str,
             src : &'a str,
-            illegal_function_list : &'a [String],
+            illegal_function_list : &'a [(String, Option<String>)],
             directive_list : &[(String, bool)]) -> Self {
         let filepath = filepath.to_string();
         let lines = prospect_newlines(src);
         let lexer = Lexer::new(src);
         let peeked = TokenKind::BoF;
         let peeked_span = Span::default();
-        let mut illegal_functions = HashSet::new();
         let directive_allow = false;
         let indent_style = IndentStyle::Unknown;
-        for name in illegal_function_list {
-            illegal_functions.insert(name.to_string());
-        }
+        let illegal_functions = illegal_function_list
+                .into_iter()
+                .map(|x| x.clone())
+                .collect();
         let directives = directive_list
                 .into_iter()
                 .map(|x| x.clone())
@@ -222,7 +222,7 @@ impl<'a> Checker<'a> {
             let token = self.generate_token()?;
             match token {
                 TokenKind::Identifier => {
-                    if self.illegal_functions.contains(self.substring()) {
+                    if self.illegal_functions.contains_key(self.substring()) {
                         self.error("banned-functions",
                                 "Accessing this variable is prohibited");
                     }
