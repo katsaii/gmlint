@@ -128,7 +128,7 @@ pub struct Checker<'a> {
     peeked : TokenKind,
     peeked_span : Span,
     illegal_functions : HashMap<String, Option<String>>,
-    directive_allow : bool,
+    directive_warn : bool,
     indent_style : IndentStyle,
     directives : HashMap<String, bool>,
 }
@@ -145,7 +145,7 @@ impl<'a> Checker<'a> {
         let lexer = Lexer::new(src);
         let peeked = TokenKind::BoF;
         let peeked_span = Span::default();
-        let directive_allow = false;
+        let directive_warn = true;
         let indent_style = IndentStyle::Unknown;
         let illegal_functions = illegal_function_list
                 .into_iter()
@@ -156,7 +156,7 @@ impl<'a> Checker<'a> {
                 .map(|x| x.clone())
                 .collect();
         Self { filepath, src, lines, lexer, peeked, peeked_span,
-                illegal_functions, directive_allow, indent_style,
+                illegal_functions, directive_warn, indent_style,
                 directives }
     }
 
@@ -167,7 +167,7 @@ impl<'a> Checker<'a> {
 
     /// Displays an error.
     pub fn error<T : fmt::Display>(&self, option : &str, reason : T) {
-        let enabled = !matches!(self.directives.get(option), Some(false));
+        let enabled = matches!(self.directives.get(option), None | Some(true));
         if enabled == directive_enabled_by_default(option) {
             display_error(&self.peeked_span, &self.lines,
                     self.src, &self.filepath, option, reason);
@@ -209,15 +209,15 @@ impl<'a> Checker<'a> {
                     }
                 },
                 TokenKind::DirectiveAllow => {
-                    self.directive_allow = true;
+                    self.directive_warn = false;
                 },
                 TokenKind::DirectiveWarn => {
-                    self.directive_allow = false;
+                    self.directive_warn = true;
                 },
                 TokenKind::DirectiveOption => {
                     let directive = self.substring();
                     self.directives.insert(
-                            directive.to_string(), self.directive_allow);
+                            directive.to_string(), self.directive_warn);
                 },
                 _ => break token,
             }
@@ -254,7 +254,9 @@ impl<'a> Checker<'a> {
 }
 
 fn directive_enabled_by_default(directive : &str) -> bool {
-    !matches!(directive, "")
+    matches!(directive,
+            "banned-functions" | "inconsistent-indentation" |
+            "bad-tab-style")
 }
 
 fn prospect_newlines(src : &str) -> Vec<Span> {

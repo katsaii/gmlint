@@ -1,9 +1,9 @@
 show_message
 
-//# ALLOW illegal-functions
+//# ALLOW banned-functions
 show_message();
 
-//# WARN illegal-functions
+//# WARN banned-functions
 var a = show_message;
 a();
 
