@@ -100,6 +100,11 @@ pub fn check_directory<P : AsRef<Path>>(
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
+        if let Some(ignores) = ignorefile {
+            if let Ok(true) = ignores.is_excluded(&path) {
+                continue;
+            }
+        }
         let meta = fs::metadata(&path)?;
         if meta.is_file() {
             if let Some("gml") = path.extension().and_then(OsStr::to_str) {
