@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 yaml-rust = "0.4.5"
 pathdiff = "0.2.1"
+gitignore = "1.0.7"

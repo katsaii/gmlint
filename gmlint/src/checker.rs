@@ -8,6 +8,7 @@ use crate::{
     token::TokenKind
 };
 use yaml_rust::YamlLoader;
+use gitignore::File as IgnoreFile;
 
 /// Searches a file with this filename, but one of an array of file
 /// extensions.
@@ -72,14 +73,20 @@ pub fn load_config<P : AsRef<Path>>(root : P)
     Some((illegal_functions, directives))
 }
 
-/// Gets a list of the illegal functions and then uses it to check all the
-/// GML files in the project.
-pub fn check_project<P : AsRef<Path>>(root : P) -> io::Result<()> {
-    let mut root_dir = env::current_dir()?;
-    root_dir.push(root);
+/// Loads the configuration file and the ignore file and uses it to check
+/// all the GML files in the project directory.
+pub fn check_project<P : AsRef<Path>>(project_dir : P) -> io::Result<()> {
+    let mut root = env::current_dir()?;
+    root.push(project_dir);
     let (illegal_functions, directives) =
-            load_config(&root_dir).unwrap_or((vec![], vec![]));
-    check_directory(root_dir, &illegal_functions, &directives)?;
+            load_config(&root).unwrap_or((vec![], vec![]));
+    let ignorepath = root.join(".gmlintignore");
+    let ignorefile = if let Ok(file) = IgnoreFile::new(&ignorepath) {
+        Some(file)
+    } else {
+        None
+    };
+    check_directory(root, &illegal_functions, &directives, &ignorefile)?;
     Ok(())
 }
 
@@ -87,7 +94,8 @@ pub fn check_project<P : AsRef<Path>>(root : P) -> io::Result<()> {
 pub fn check_directory<P : AsRef<Path>>(
         root : P,
         illegal_functions : &[(String, Option<String>)],
-        directives : &[(String, bool)]) -> io::Result<()> {
+        directives : &[(String, bool)],
+        ignorefile : &Option<IgnoreFile>) -> io::Result<()> {
     let entries = fs::read_dir(root)?;
     for entry in entries {
         let entry = entry?;
@@ -98,7 +106,7 @@ pub fn check_directory<P : AsRef<Path>>(
                 check_file(path, illegal_functions, directives)?;
             }
         } else if meta.is_dir() {
-            check_directory(path, illegal_functions, directives)?;
+            check_directory(path, illegal_functions, directives, ignorefile)?;
         }
     }
     Ok(())
