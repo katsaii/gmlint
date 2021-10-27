@@ -29,7 +29,7 @@ pub fn read_to_string_with_extension<P : AsRef<Path>>(
 /// YAML file.
 pub fn load_config<P : AsRef<Path>>(root : P)
         -> Option<(Vec<(String, Option<String>)>, Vec<(String, bool)>)> {
-    let mut illegal_functions = Vec::new();
+    let mut banned_functions = Vec::new();
     let mut directives = Vec::new();
     if let Some(yaml_content) = read_to_string_with_extension(
             root.as_ref(), "gmlint", &["yml", "yaml", "json"]) {
@@ -41,7 +41,7 @@ pub fn load_config<P : AsRef<Path>>(root : P)
                         let pattern = field["pattern"].as_str()?.to_string();
                         let suggestion = field["instead"].as_str()
                                 .map(|x| x.to_string());
-                        illegal_functions.push((pattern, suggestion));
+                        banned_functions.push((pattern, suggestion));
                     }
                 }
                 if let Some(names) = doc["allow"].as_vec() {
@@ -59,7 +59,7 @@ pub fn load_config<P : AsRef<Path>>(root : P)
             }
         }
     }
-    Some((illegal_functions, directives))
+    Some((banned_functions, directives))
 }
 
 /// Loads the configuration file and the ignore file and uses it to check
@@ -67,7 +67,7 @@ pub fn load_config<P : AsRef<Path>>(root : P)
 pub fn check_project<P : AsRef<Path>>(project_dir : P) -> io::Result<()> {
     let mut root = env::current_dir()?;
     root.push(project_dir);
-    let (illegal_functions, directives) =
+    let (banned_functions, directives) =
             load_config(&root).unwrap_or((vec![], vec![]));
     let ignorepath = root.join(".gmlintignore");
     let ignorefile = if let Ok(file) = IgnoreFile::new(&ignorepath) {
@@ -75,14 +75,14 @@ pub fn check_project<P : AsRef<Path>>(project_dir : P) -> io::Result<()> {
     } else {
         None
     };
-    check_directory(root, &illegal_functions, &directives, &ignorefile)?;
+    check_directory(root, &banned_functions, &directives, &ignorefile)?;
     Ok(())
 }
 
 /// Recursively checks the GML files of a directory.
 pub fn check_directory<P : AsRef<Path>>(
         root : P,
-        illegal_functions : &[(String, Option<String>)],
+        banned_functions : &[(String, Option<String>)],
         directives : &[(String, bool)],
         ignorefile : &Option<IgnoreFile>) -> io::Result<()> {
     let entries = fs::read_dir(root)?;
@@ -97,10 +97,10 @@ pub fn check_directory<P : AsRef<Path>>(
         let meta = fs::metadata(&path)?;
         if meta.is_file() {
             if let Some("gml") = path.extension().and_then(OsStr::to_str) {
-                check_file(path, illegal_functions, directives)?;
+                check_file(path, banned_functions, directives)?;
             }
         } else if meta.is_dir() {
-            check_directory(path, illegal_functions, directives, ignorefile)?;
+            check_directory(path, banned_functions, directives, ignorefile)?;
         }
     }
     Ok(())
@@ -109,14 +109,14 @@ pub fn check_directory<P : AsRef<Path>>(
 /// Performs checks on this file and prints errors to the standard output.
 pub fn check_file<P : AsRef<Path>>(
         filepath : P,
-        illegal_functions : &[(String, Option<String>)],
+        banned_functions : &[(String, Option<String>)],
         directives : &[(String, bool)]) -> io::Result<()> {
     if let Some(filepath_rel) =
             pathdiff::diff_paths(&filepath, env::current_dir()?) {
         let filename = filepath_rel.to_str().unwrap_or("").to_string();
         let src = fs::read_to_string(filepath)?;
         let checker = Checker::new(
-                &filename, &src, illegal_functions, directives);
+                &filename, &src, banned_functions, directives);
         checker.perform_checks();
     }
     Ok(())
@@ -138,7 +138,7 @@ pub struct Checker<'a> {
     lexer : Lexer<'a>,
     peeked : TokenKind,
     peeked_span : Span,
-    illegal_functions : HashMap<String, Option<String>>,
+    banned_functions : Vec<(String, Option<String>)>,
     directive_warn : bool,
     indent_style : IndentStyle,
     directives : HashMap<String, bool>,
@@ -150,7 +150,7 @@ impl<'a> Checker<'a> {
     pub fn new(
             filepath : &str,
             src : &'a str,
-            illegal_function_list : &'a [(String, Option<String>)],
+            banned_function_list : &'a [(String, Option<String>)],
             directive_list : &[(String, bool)]) -> Self {
         let filepath = filepath.to_string();
         let lines = prospect_newlines(src);
@@ -159,7 +159,7 @@ impl<'a> Checker<'a> {
         let peeked_span = Span::default();
         let directive_warn = true;
         let indent_style = IndentStyle::Unknown;
-        let illegal_functions = illegal_function_list
+        let banned_functions = banned_function_list
                 .into_iter()
                 .map(|x| x.clone())
                 .collect();
@@ -169,7 +169,7 @@ impl<'a> Checker<'a> {
                 .collect();
         let error_count = 0;
         Self { filepath, src, lines, lexer, peeked, peeked_span,
-                illegal_functions, directive_warn, indent_style,
+                banned_functions, directive_warn, indent_style,
                 directives, error_count }
     }
 
@@ -264,16 +264,19 @@ impl<'a> Checker<'a> {
             let token = self.generate_token()?;
             match token {
                 TokenKind::Identifier => {
-                    if let Some(replacement) =
-                            self.illegal_functions.get(self.substring()) {
-                        let extra_message = if let Some(name) = replacement {
-                            format!(", instead use `{}`", name)
-                        } else {
-                            String::new()
-                        };
-                        self.error("banned-functions",
-                                format!("Accessing this variable is \
-                                        prohibited{}", extra_message));
+                    let substring = self.substring();
+                    for (pattern, replacement) in &self.banned_functions {
+                        if pattern == substring {
+                            let message = if let Some(name) = replacement {
+                                format!(", instead use `{}`", name)
+                            } else {
+                                String::new()
+                            };
+                            self.error("banned-functions",
+                                    format!("Accessing this variable is \
+                                            prohibited{}", message));
+                            break;
+                        }
                     }
                 },
                 _ => (),
