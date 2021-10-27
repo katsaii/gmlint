@@ -9,56 +9,65 @@ use crate::{
 };
 use yaml_rust::YamlLoader;
 
+/// Searches a file with this filename, but one of an array of file
+/// extensions.
+pub fn read_to_string_with_extension<P : AsRef<Path>>(
+        dir : P,
+        name : &'static str,
+        exts : &[&'static str]) -> Option<String> {
+    for ext in exts {
+        let filepath = dir.as_ref().join(format!("{}.{}", name, ext));
+        if let Ok(content) = fs::read_to_string(filepath) {
+            return Some(content);
+        }
+    }
+    None
+}
+
 /// Loads the banned function list and global directive options from a
 /// YAML file.
 pub fn load_config<P : AsRef<Path>>(root : P)
         -> Option<(Vec<(String, Option<String>)>, Vec<(String, bool)>)> {
     let mut illegal_functions = Vec::new();
     let mut directives = Vec::new();
-    match fs::read_to_string(root.as_ref().join("gmlint.yaml")) {
-        Ok(yaml_content) => {
-            match YamlLoader::load_from_str(&yaml_content) {
-                Ok(yaml) => {
-                    if yaml.len() >= 1 {
-                        let doc = &yaml[0];
-                        if let Some(fields) = doc["banned"].as_vec() {
-                            for field in fields {
-                                let arg = if let Some(name) = field.as_str() {
-                                    (name.to_string(), None)
-                                } else {
-                                    // getting the replacement function name
-                                    let pair = field.as_vec()?;
-                                    match pair.len() {
-                                        0 => continue,
-                                        1 => (pair[0].as_str()?.to_string(),
-                                                None),
-                                        _ => (pair[0].as_str()?.to_string(),
-                                                Some(pair[1].as_str()?
-                                                        .to_string())),
-                                    }
-                                };
-                                illegal_functions.push(arg);
+    if let Some(yaml_content) = read_to_string_with_extension(
+            root.as_ref(), "gmlint", &["yml", "yaml", "json"]) {
+        if let Ok(yaml) = YamlLoader::load_from_str(&yaml_content) {
+            if yaml.len() >= 1 {
+                let doc = &yaml[0];
+                if let Some(fields) = doc["banned"].as_vec() {
+                    for field in fields {
+                        let arg = if let Some(name) = field.as_str() {
+                            (name.to_string(), None)
+                        } else {
+                            // getting the replacement function name
+                            let pair = field.as_vec()?;
+                            match pair.len() {
+                                0 => continue,
+                                1 => (pair[0].as_str()?.to_string(),
+                                        None),
+                                _ => (pair[0].as_str()?.to_string(),
+                                        Some(pair[1].as_str()?
+                                                .to_string())),
                             }
-                        }
-                        if let Some(names) = doc["allow"].as_vec() {
-                            for name in names {
-                                directives.push(
-                                        (name.as_str()?.to_string(), false));
-                            }
-                        }
-                        if let Some(names) = doc["warn"].as_vec() {
-                            for name in names {
-                                directives.push(
-                                        (name.as_str()?.to_string(), true));
-                            }
-                        }
+                        };
+                        illegal_functions.push(arg);
                     }
-                },
-                Err(e) => println!("failed to load config correctly:\n{}", e),
+                }
+                if let Some(names) = doc["allow"].as_vec() {
+                    for name in names {
+                        directives.push(
+                                (name.as_str()?.to_string(), false));
+                    }
+                }
+                if let Some(names) = doc["warn"].as_vec() {
+                    for name in names {
+                        directives.push(
+                                (name.as_str()?.to_string(), true));
+                    }
+                }
             }
-        },
-        Err(e) => println!(
-                "missing config file `gmlint.yaml` in root:\n{}", e),
+        }
     }
     Some((illegal_functions, directives))
 }
