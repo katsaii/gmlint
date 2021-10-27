@@ -38,21 +38,10 @@ pub fn load_config<P : AsRef<Path>>(root : P)
                 let doc = &yaml[0];
                 if let Some(fields) = doc["banned"].as_vec() {
                     for field in fields {
-                        let arg = if let Some(name) = field.as_str() {
-                            (name.to_string(), None)
-                        } else {
-                            // getting the replacement function name
-                            let pair = field.as_vec()?;
-                            match pair.len() {
-                                0 => continue,
-                                1 => (pair[0].as_str()?.to_string(),
-                                        None),
-                                _ => (pair[0].as_str()?.to_string(),
-                                        Some(pair[1].as_str()?
-                                                .to_string())),
-                            }
-                        };
-                        illegal_functions.push(arg);
+                        let pattern = field["pattern"].as_str()?.to_string();
+                        let suggestion = field["instead"].as_str()
+                                .map(|x| x.to_string());
+                        illegal_functions.push((pattern, suggestion));
                     }
                 }
                 if let Some(names) = doc["allow"].as_vec() {

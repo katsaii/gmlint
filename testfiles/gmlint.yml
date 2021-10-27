@@ -1,4 +1,5 @@
 banned:
- - show_message
- - [this, self]
- - [array_length]
+ - pattern: show_message
+ - pattern: this
+   instead: self
+ - pattern: array_length
