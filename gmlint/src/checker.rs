@@ -140,6 +140,7 @@ pub struct Checker<'a> {
     directive_warn : bool,
     indent_style : IndentStyle,
     directives : HashMap<String, bool>,
+    error_count : usize,
 }
 
 impl<'a> Checker<'a> {
@@ -164,9 +165,10 @@ impl<'a> Checker<'a> {
                 .into_iter()
                 .map(|x| x.clone())
                 .collect();
+        let error_count = 0;
         Self { filepath, src, lines, lexer, peeked, peeked_span,
                 illegal_functions, directive_warn, indent_style,
-                directives }
+                directives, error_count }
     }
 
     /// Returns the substring of the current span.
@@ -175,9 +177,13 @@ impl<'a> Checker<'a> {
     }
 
     /// Displays an error.
-    pub fn error<T : fmt::Display>(&self, option : &str, reason : T) {
+    pub fn error<T : fmt::Display>(&mut self, option : &str, reason : T) {
         let enabled = matches!(self.directives.get(option), None | Some(true));
         if enabled == directive_enabled_by_default(option) {
+            if self.error_count != 0 {
+                println!();
+            }
+            self.error_count += 1;
             display_error(&self.peeked_span, &self.lines,
                     self.src, &self.filepath, option, reason);
         }
@@ -239,7 +245,19 @@ impl<'a> Checker<'a> {
     }
 
     /// Runs the checks and consumes this checker.
-    pub fn perform_checks(mut self) -> Option<()> {
+    pub fn perform_checks(mut self) {
+        self.check_program();
+        if self.error_count > 0 {
+            let plural = if self.error_count == 1 { "" } else { "s" };
+            println!();
+            println!("displayed {} error{} for {}",
+                    self.error_count, plural, self.filepath);
+            println!();
+        }
+    }
+
+    /// Performs some checks for the program.
+    pub fn check_program(&mut self) -> Option<()> {
         loop {
             let token = self.generate_token()?;
             match token {
@@ -323,7 +341,7 @@ fn display_error<T : fmt::Display>(
     if indent_length == 0 {
         indent_length = 1;
     }
-    println!("\nWarning in {}:{}:{}", filepath, row, col);
+    println!("error in {}:{}:{}", filepath, row, col);
     let indent = " ".repeat(indent_length);
     // underline error
     let mut underline_length = error_end - error_begin;
@@ -339,6 +357,6 @@ fn display_error<T : fmt::Display>(
     }
     println!("\n {} :{}{} {}", indent, " ".repeat(col),
             "^".repeat(underline_length), reason);
-    print!(" {} ? If this is intentional, ", indent);
+    print!(" {} ? To disable this check, ", indent);
     println!("include `//# ALLOW {}` before line {}", option, row);
 }
