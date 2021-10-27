@@ -9,6 +9,7 @@ use crate::{
 };
 use yaml_rust::YamlLoader;
 use gitignore::File as IgnoreFile;
+use glob::Pattern;
 
 /// Searches a file with this filename, but one of an array of file
 /// extensions.
@@ -28,7 +29,7 @@ pub fn read_to_string_with_extension<P : AsRef<Path>>(
 /// Loads the banned function list and global directive options from a
 /// YAML file.
 pub fn load_config<P : AsRef<Path>>(root : P)
-        -> Option<(Vec<(String, Option<String>)>, Vec<(String, bool)>)> {
+        -> Option<(Vec<(Pattern, Option<String>)>, Vec<(String, bool)>)> {
     let mut banned_functions = Vec::new();
     let mut directives = Vec::new();
     if let Some(yaml_content) = read_to_string_with_extension(
@@ -38,7 +39,12 @@ pub fn load_config<P : AsRef<Path>>(root : P)
                 let doc = &yaml[0];
                 if let Some(fields) = doc["banned"].as_vec() {
                     for field in fields {
-                        let pattern = field["pattern"].as_str()?.to_string();
+                        let pattern = if let Ok(pattern) = Pattern::new(
+                                field["pattern"].as_str()?) {
+                            pattern
+                        } else {
+                            return None;
+                        };
                         let suggestion = field["instead"].as_str()
                                 .map(|x| x.to_string());
                         banned_functions.push((pattern, suggestion));
@@ -82,7 +88,7 @@ pub fn check_project<P : AsRef<Path>>(project_dir : P) -> io::Result<()> {
 /// Recursively checks the GML files of a directory.
 pub fn check_directory<P : AsRef<Path>>(
         root : P,
-        banned_functions : &[(String, Option<String>)],
+        banned_functions : &[(Pattern, Option<String>)],
         directives : &[(String, bool)],
         ignorefile : &Option<IgnoreFile>) -> io::Result<()> {
     let entries = fs::read_dir(root)?;
@@ -109,7 +115,7 @@ pub fn check_directory<P : AsRef<Path>>(
 /// Performs checks on this file and prints errors to the standard output.
 pub fn check_file<P : AsRef<Path>>(
         filepath : P,
-        banned_functions : &[(String, Option<String>)],
+        banned_functions : &[(Pattern, Option<String>)],
         directives : &[(String, bool)]) -> io::Result<()> {
     if let Some(filepath_rel) =
             pathdiff::diff_paths(&filepath, env::current_dir()?) {
@@ -138,7 +144,7 @@ pub struct Checker<'a> {
     lexer : Lexer<'a>,
     peeked : TokenKind,
     peeked_span : Span,
-    banned_functions : Vec<(String, Option<String>)>,
+    banned_functions : Vec<(Pattern, Option<String>)>,
     directive_warn : bool,
     indent_style : IndentStyle,
     directives : HashMap<String, bool>,
@@ -150,7 +156,7 @@ impl<'a> Checker<'a> {
     pub fn new(
             filepath : &str,
             src : &'a str,
-            banned_function_list : &'a [(String, Option<String>)],
+            banned_function_list : &'a [(Pattern, Option<String>)],
             directive_list : &[(String, bool)]) -> Self {
         let filepath = filepath.to_string();
         let lines = prospect_newlines(src);
@@ -266,7 +272,7 @@ impl<'a> Checker<'a> {
                 TokenKind::Identifier => {
                     let substring = self.substring();
                     for (pattern, replacement) in &self.banned_functions {
-                        if pattern == substring {
+                        if pattern.matches(substring) {
                             let message = if let Some(name) = replacement {
                                 format!(", instead use `{}`", name)
                             } else {

@@ -2,4 +2,4 @@ banned:
  - pattern: show_message
  - pattern: this
    instead: self
- - pattern: array_length
+ - pattern: array_*
