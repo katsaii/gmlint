@@ -1,145 +1,121 @@
-error in testfiles/using-directives.gml:1:1
+error (banned-functions) in testfiles/using-directives.gml:1:1
  1 | show_message
-   : ^^^^^^^^^^^^ Accessing this variable is prohibited
-   ? To disable this check, include `//# ALLOW banned-functions` before line 1
+   | ^^^^^^^^^^^^ accessing this variable is prohibited
+   = note: `//# WARN banned-functions` is enabled
 
-error in testfiles/using-directives.gml:7:9
+error (banned-functions) in testfiles/using-directives.gml:7:9
  7 | var a = show_message;
-   :         ^^^^^^^^^^^^ Accessing this variable is prohibited
-   ? To disable this check, include `//# ALLOW banned-functions` before line 7
+   |         ^^^^^^^^^^^^ accessing this variable is prohibited
 
 displayed 2 errors for testfiles/using-directives.gml
 
-error in testfiles/bad-tab-style.gml:1:6
+error (bad-tab-style) in testfiles/bad-tab-style.gml:1:6
  1 | hello this is bad
-   :      ^ Tab is used here when it shouldn't be
-   ? To disable this check, include `//# ALLOW bad-tab-style` before line 1
+   |      ^ tab is used here when it shouldn't be
+   = note: `//# WARN bad-tab-style` is enabled
 
-error in testfiles/bad-tab-style.gml:1:7
+error (banned-functions) in testfiles/bad-tab-style.gml:1:7
  1 | hello this is bad
-   :       ^^^^ Accessing this variable is prohibited, instead use `self`
-   ? To disable this check, include `//# ALLOW banned-functions` before line 1
+   |       ^^^^ accessing this variable is prohibited, instead use `self`
 
-error in testfiles/bad-tab-style.gml:1:14
+error (bad-tab-style) in testfiles/bad-tab-style.gml:1:14
  1 | hello this is bad
-   :              ^ Tab is used here when it shouldn't be
-   ? To disable this check, include `//# ALLOW bad-tab-style` before line 1
+   |              ^ tab is used here when it shouldn't be
 
 displayed 3 errors for testfiles/bad-tab-style.gml
 
-error in testfiles/inconsistent-indentation.gml:5:1
+error (inconsistent-indentation) in testfiles/inconsistent-indentation.gml:5:1
  5 |  e
-   : ^ Expected a space, but found a tab
-   ? To disable this check, include `//# ALLOW inconsistent-indentation` before line 5
+   | ^ expected a space, but found a tab
+   = note: `//# WARN inconsistent-indentation` is enabled
 
-error in testfiles/inconsistent-indentation.gml:6:1
+error (inconsistent-indentation) in testfiles/inconsistent-indentation.gml:6:1
  6 |      f
-   : ^ Expected a space, but found a tab
-   ? To disable this check, include `//# ALLOW inconsistent-indentation` before line 6
+   | ^ expected a space, but found a tab
 
-error in testfiles/inconsistent-indentation.gml:6:4
+error (inconsistent-indentation) in testfiles/inconsistent-indentation.gml:6:4
  6 |      f
-   :    ^ Expected a space, but found a tab
-   ? To disable this check, include `//# ALLOW inconsistent-indentation` before line 6
+   |    ^ expected a space, but found a tab
 
 displayed 3 errors for testfiles/inconsistent-indentation.gml
 
-error in testfiles/scripts/files-in-directories.gml:2:1
+error (inconsistent-indentation) in testfiles/scripts/files-in-directories.gml:2:1
  2 |  uwu
-   : ^ Expected a tab, but found a space
-   ? To disable this check, include `//# ALLOW inconsistent-indentation` before line 2
+   | ^ expected a tab, but found a space
 
 displayed 1 error for testfiles/scripts/files-in-directories.gml
 
-error in testfiles/scripts/idiomatic-gml.gml:4:17
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:4:17
  4 |  for (var i=0;i<array_length(buttons);i++) {
-   :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
-   ? To disable this check, include `//# ALLOW banned-functions` before line 4
+   |                 ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:5:68
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:5:68
  5 |   if (gamepad_button_check_pressed(device,buttons[i])) return true; 
-   :                                                                    ^ Tab is used here when it shouldn't be
-   ? To disable this check, include `//# ALLOW bad-tab-style` before line 5
+   |                                                                    ^ tab is used here when it shouldn't be
 
-error in testfiles/scripts/idiomatic-gml.gml:11:17
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:11:17
  11 |  for (var i=0;i<array_length(buttons);i++) {
-    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? To disable this check, include `//# ALLOW banned-functions` before line 11
+    |                 ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:12:60
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:12:60
  12 |   if (gamepad_button_check(device,buttons[i])) return true; 
-    :                                                            ^ Tab is used here when it shouldn't be
-    ? To disable this check, include `//# ALLOW bad-tab-style` before line 12
+    |                                                            ^ tab is used here when it shouldn't be
 
-error in testfiles/scripts/idiomatic-gml.gml:18:17
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:18:17
  18 |  for (var i=0;i<array_length(buttons);i++) {
-    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? To disable this check, include `//# ALLOW banned-functions` before line 18
+    |                 ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:19:69
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:19:69
  19 |   if (gamepad_button_check_released(device,buttons[i])) return true; 
-    :                                                                     ^ Tab is used here when it shouldn't be
-    ? To disable this check, include `//# ALLOW bad-tab-style` before line 19
+    |                                                                     ^ tab is used here when it shouldn't be
 
-error in testfiles/scripts/idiomatic-gml.gml:25:17
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:25:17
  25 |  for (var i=0;i<array_length(keys);i++) {
-    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? To disable this check, include `//# ALLOW banned-functions` before line 25
+    |                 ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:27:16
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:27:16
  27 |    return true; 
-    :                ^ Tab is used here when it shouldn't be
-    ? To disable this check, include `//# ALLOW bad-tab-style` before line 27
+    |                ^ tab is used here when it shouldn't be
 
-error in testfiles/scripts/idiomatic-gml.gml:34:17
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:34:17
  34 |  for (var i=0;i<array_length(keys);i++) {
-    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? To disable this check, include `//# ALLOW banned-functions` before line 34
+    |                 ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:36:16
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:36:16
  36 |    return true; 
-    :                ^ Tab is used here when it shouldn't be
-    ? To disable this check, include `//# ALLOW bad-tab-style` before line 36
+    |                ^ tab is used here when it shouldn't be
 
-error in testfiles/scripts/idiomatic-gml.gml:43:17
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:43:17
  43 |  for (var i=0;i<array_length(keys);i++) {
-    :                 ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? To disable this check, include `//# ALLOW banned-functions` before line 43
+    |                 ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:45:16
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:45:16
  45 |    return true; 
-    :                ^ Tab is used here when it shouldn't be
-    ? To disable this check, include `//# ALLOW bad-tab-style` before line 45
+    |                ^ tab is used here when it shouldn't be
 
-error in testfiles/scripts/idiomatic-gml.gml:56:7
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:56:7
  56 |   if (array_length(obj_input.controller_values)-1 < i) continue;
-    :       ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? To disable this check, include `//# ALLOW banned-functions` before line 56
+    |       ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:57:30
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:57:30
  57 |   if (gamepad_is_connected(i) ) {
-    :                              ^ Tab is used here when it shouldn't be
-    ? To disable this check, include `//# ALLOW bad-tab-style` before line 57
+    |                              ^ tab is used here when it shouldn't be
 
-error in testfiles/scripts/idiomatic-gml.gml:71:7
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:71:7
  71 |   if (array_length(obj_input.controller_values)-1 < i) continue;
-    :       ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? To disable this check, include `//# ALLOW banned-functions` before line 71
+    |       ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:72:30
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:72:30
  72 |   if (gamepad_is_connected(i) ) {
-    :                              ^ Tab is used here when it shouldn't be
-    ? To disable this check, include `//# ALLOW bad-tab-style` before line 72
+    |                              ^ tab is used here when it shouldn't be
 
-error in testfiles/scripts/idiomatic-gml.gml:96:7
+error (banned-functions) in testfiles/scripts/idiomatic-gml.gml:96:7
  96 |   if (array_length(obj_input.controller_values)-1 < i) continue;
-    :       ^^^^^^^^^^^^ Accessing this variable is prohibited
-    ? To disable this check, include `//# ALLOW banned-functions` before line 96
+    |       ^^^^^^^^^^^^ accessing this variable is prohibited
 
-error in testfiles/scripts/idiomatic-gml.gml:97:30
+error (bad-tab-style) in testfiles/scripts/idiomatic-gml.gml:97:30
  97 |   if (gamepad_is_connected(i) ) {
-    :                              ^ Tab is used here when it shouldn't be
-    ? To disable this check, include `//# ALLOW bad-tab-style` before line 97
+    |                              ^ tab is used here when it shouldn't be
 
 displayed 18 errors for testfiles/scripts/idiomatic-gml.gml
 

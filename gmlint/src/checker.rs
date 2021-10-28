@@ -203,12 +203,12 @@ impl<'a> Checker<'a> {
                 TokenKind::Tab => {
                     if !newline {
                         self.error("bad-tab-style",
-                                "Tab is used here when it shouldn't be");
+                                "tab is used here when it shouldn't be");
                     } else if self.indent_style == IndentStyle::Unknown {
                         self.indent_style = IndentStyle::Tab;
                     } else if self.indent_style == IndentStyle::Space {
                         self.error("inconsistent-indentation",
-                                "Expected a space, but found a tab");
+                                "expected a space, but found a tab");
                     }
                 },
                 TokenKind::Space => {
@@ -218,7 +218,7 @@ impl<'a> Checker<'a> {
                         self.indent_style = IndentStyle::Space;
                     } else if self.indent_style == IndentStyle::Tab {
                         self.error("inconsistent-indentation",
-                                "Expected a tab, but found a space");
+                                "expected a tab, but found a space");
                     }
                 },
                 TokenKind::DirectiveAllow => {
@@ -269,7 +269,7 @@ impl<'a> Checker<'a> {
                                 String::new()
                             };
                             self.error("banned-functions",
-                                    format!("Accessing this variable is \
+                                    format!("accessing this variable is \
                                             prohibited{}", message));
                             break;
                         }
@@ -343,7 +343,7 @@ fn display_error<T : fmt::Display>(
     if indent_length == 0 {
         indent_length = 1;
     }
-    println!("error in {}:{}:{}", filepath, row, col);
+    println!("error ({}) in {}:{}:{}", option, filepath, row, col);
     let indent = " ".repeat(indent_length);
     // underline error
     let mut underline_length = error_end - error_begin;
