@@ -361,6 +361,10 @@ fn display_error<T : fmt::Display>(
             "^".repeat(underline_length), reason);
     if !visited_options.contains(option) {
         visited_options.insert(option.to_string());
-        println!(" {} = note: `//# WARN {}` is enabled", indent, option);
+        print!(" {} = note: `//# WARN {}` is enabled", indent, option);
+        if directive_enabled_by_default(option) {
+            print!(" by default");
+        }
+        println!();
     }
 }
