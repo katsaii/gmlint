@@ -182,14 +182,6 @@ impl<'a> Lexer<'a> {
                         self.ignore_next_char = true;
                         TokenKind::Other
                     },
-                    x if is_ascii_letter(&x) => {
-                        self.advance_while(is_ascii_graphic);
-                        if matches!(self.substring(), "var" | "static") {
-                            TokenKind::VarDecl
-                        } else {
-                            TokenKind::Identifier
-                        }
-                    },
                     x if is_ascii_digit(&x) => {
                         if matches!(x, '0') && self.sat(|x| matches!(x, 'x')) {
                             self.advance_while(is_hex_digit);
@@ -197,6 +189,14 @@ impl<'a> Lexer<'a> {
                             self.advance_while(is_ascii_digit);
                         }
                         TokenKind::Other
+                    },
+                    x if is_ascii_graphic(&x) => {
+                        self.advance_while(is_ascii_graphic);
+                        if matches!(self.substring(), "var" | "static") {
+                            TokenKind::VarDecl
+                        } else {
+                            TokenKind::Identifier
+                        }
                     },
                     _ => TokenKind::Other,
                 }

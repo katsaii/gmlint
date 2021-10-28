@@ -92,7 +92,6 @@ pub fn check_project<P : AsRef<Path>>(project_dir : P) -> io::Result<()> {
     if create_ignorefile {
         fs::remove_file(&ignorepath)?;
     }
-    println!("epic");
     Ok(())
 }
 
@@ -109,7 +108,6 @@ pub fn check_file<P : AsRef<Path>>(
                 &filename, &src, banned_functions, directives);
         checker.perform_checks();
     }
-    println!("and awesome");
     Ok(())
 }
 
@@ -257,7 +255,6 @@ impl<'a> Checker<'a> {
                 TokenKind::Identifier => {
                     let substring = self.substring();
                     for (pattern, replacement) in &self.banned_functions {
-                        println!(" -- {} {}", pattern, substring);
                         if pattern.matches(substring) {
                             let message = if let Some(name) = replacement {
                                 format!(", instead use `{}`", name)
