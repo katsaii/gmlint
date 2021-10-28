@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{ HashMap, HashSet },
     path::Path, ffi::OsStr,
     cmp, fs, mem, env, io, fmt,
 };
@@ -84,9 +84,11 @@ pub fn check_project<P : AsRef<Path>>(project_dir : P) -> io::Result<()> {
             and_then(|ok| ok.included_files()).map_err(|err| {
                 io::Error::new(io::ErrorKind::Other, err)
             })?;
+    let mut visited_directives = HashSet::new();
     for path in paths {
         if let Some("gml") = path.extension().and_then(OsStr::to_str) {
-            check_file(path, &banned_functions, &directives)?;
+            check_file(path, &banned_functions, &directives,
+                    &mut visited_directives)?;
         }
     }
     if create_ignorefile {
@@ -99,13 +101,15 @@ pub fn check_project<P : AsRef<Path>>(project_dir : P) -> io::Result<()> {
 pub fn check_file<P : AsRef<Path>>(
         filepath : P,
         banned_functions : &[(Pattern, Option<String>)],
-        directives : &[(String, bool)]) -> io::Result<()> {
+        directives : &[(String, bool)],
+        visited_directives : &mut HashSet<String>) -> io::Result<()> {
     if let Some(filepath_rel) =
             pathdiff::diff_paths(&filepath, env::current_dir()?) {
         let filename = filepath_rel.to_str().unwrap_or("").to_string();
         let src = fs::read_to_string(filepath)?;
         let checker = Checker::new(
-                &filename, &src, banned_functions, directives);
+                &filename, &src, banned_functions, directives,
+                visited_directives);
         checker.perform_checks();
     }
     Ok(())
@@ -132,6 +136,7 @@ pub struct Checker<'a> {
     indent_style : IndentStyle,
     directives : HashMap<String, bool>,
     error_count : usize,
+    visited_directives : &'a mut HashSet<String>,
 }
 
 impl<'a> Checker<'a> {
@@ -140,7 +145,8 @@ impl<'a> Checker<'a> {
             filepath : &str,
             src : &'a str,
             banned_function_list : &'a [(Pattern, Option<String>)],
-            directive_list : &[(String, bool)]) -> Self {
+            directive_list : &[(String, bool)],
+            visited_directives : &'a mut HashSet<String>) -> Self {
         let filepath = filepath.to_string();
         let lines = prospect_newlines(src);
         let lexer = Lexer::new(src);
@@ -159,7 +165,7 @@ impl<'a> Checker<'a> {
         let error_count = 0;
         Self { filepath, src, lines, lexer, peeked, peeked_span,
                 banned_functions, directive_warn, indent_style,
-                directives, error_count }
+                directives, error_count, visited_directives }
     }
 
     /// Returns the substring of the current span.
@@ -175,8 +181,9 @@ impl<'a> Checker<'a> {
                 println!();
             }
             self.error_count += 1;
-            display_error(&self.peeked_span, &self.lines,
-                    self.src, &self.filepath, option, reason);
+            display_error(&self.peeked_span, &self.lines, self.src,
+                    &self.filepath, option, reason,
+                    &mut self.visited_directives);
         }
     }
 
@@ -322,7 +329,8 @@ fn display_error<T : fmt::Display>(
         src : &str,
         filepath : &str,
         option : &str,
-        reason : T) {
+        reason : T,
+        visited_options : &mut HashSet<String>) {
     let error_begin = span.begin;
     let error_end = span.end;
     let line_begin = binary_search_newlines(&lines, error_begin).unwrap();
@@ -349,8 +357,10 @@ fn display_error<T : fmt::Display>(
         print!(" ... ({} line{} omitted)", lines_omitted,
                 if lines_omitted == 1 { "" } else { "s" });
     }
-    println!("\n {} :{}{} {}", indent, " ".repeat(col),
+    println!("\n {} |{}{} {}", indent, " ".repeat(col),
             "^".repeat(underline_length), reason);
-    print!(" {} ? To disable this check, ", indent);
-    println!("include `//# ALLOW {}` before line {}", option, row);
+    if !visited_options.contains(option) {
+        visited_options.insert(option.to_string());
+        println!(" {} = note: `//# WARN {}` is enabled", indent, option);
+    }
 }
