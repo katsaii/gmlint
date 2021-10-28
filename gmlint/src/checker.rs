@@ -76,39 +76,23 @@ pub fn check_project<P : AsRef<Path>>(project_dir : P) -> io::Result<()> {
     let (banned_functions, directives) =
             load_config(&root).unwrap_or((vec![], vec![]));
     let ignorepath = root.join(".gmlintignore");
-    let ignorefile = if let Ok(file) = IgnoreFile::new(&ignorepath) {
-        Some(file)
-    } else {
-        None
-    };
-    check_directory(root, &banned_functions, &directives, &ignorefile)?;
-    Ok(())
-}
-
-/// Recursively checks the GML files of a directory.
-pub fn check_directory<P : AsRef<Path>>(
-        root : P,
-        banned_functions : &[(Pattern, Option<String>)],
-        directives : &[(String, bool)],
-        ignorefile : &Option<IgnoreFile>) -> io::Result<()> {
-    let entries = fs::read_dir(root)?;
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        if let Some(ignores) = ignorefile {
-            if let Ok(true) = ignores.is_excluded(&path) {
-                continue;
-            }
-        }
-        let meta = fs::metadata(&path)?;
-        if meta.is_file() {
-            if let Some("gml") = path.extension().and_then(OsStr::to_str) {
-                check_file(path, banned_functions, directives)?;
-            }
-        } else if meta.is_dir() {
-            check_directory(path, banned_functions, directives, ignorefile)?;
+    let create_ignorefile = !ignorepath.exists();
+    if create_ignorefile {
+        fs::File::create(&ignorepath)?;
+    }
+    let paths = IgnoreFile::new(&ignorepath).
+            and_then(|ok| ok.included_files()).map_err(|err| {
+                io::Error::new(io::ErrorKind::Other, err)
+            })?;
+    for path in paths {
+        if let Some("gml") = path.extension().and_then(OsStr::to_str) {
+            check_file(path, &banned_functions, &directives)?;
         }
     }
+    if create_ignorefile {
+        fs::remove_file(&ignorepath)?;
+    }
+    println!("epic");
     Ok(())
 }
 
@@ -125,6 +109,7 @@ pub fn check_file<P : AsRef<Path>>(
                 &filename, &src, banned_functions, directives);
         checker.perform_checks();
     }
+    println!("and awesome");
     Ok(())
 }
 
@@ -272,6 +257,7 @@ impl<'a> Checker<'a> {
                 TokenKind::Identifier => {
                     let substring = self.substring();
                     for (pattern, replacement) in &self.banned_functions {
+                        println!(" -- {} {}", pattern, substring);
                         if pattern.matches(substring) {
                             let message = if let Some(name) = replacement {
                                 format!(", instead use `{}`", name)
