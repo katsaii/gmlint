@@ -201,24 +201,30 @@ impl<'a> Checker<'a> {
                 },
                 TokenKind::Comment | TokenKind::Other => (),
                 TokenKind::Tab => {
-                    if !newline {
+                    if newline {
+                        self.error("prefer-space-indent",
+                                "indents should use spaces, but found a tab");
+                        if self.indent_style == IndentStyle::Unknown {
+                            self.indent_style = IndentStyle::Tab;
+                        } else if self.indent_style == IndentStyle::Space {
+                            self.error("inconsistent-indent",
+                                    "expected a space, but found a tab");
+                        }
+                    } else {
                         self.error("bad-tab-style",
                                 "tab is used here when it shouldn't be");
-                    } else if self.indent_style == IndentStyle::Unknown {
-                        self.indent_style = IndentStyle::Tab;
-                    } else if self.indent_style == IndentStyle::Space {
-                        self.error("inconsistent-indentation",
-                                "expected a space, but found a tab");
                     }
                 },
                 TokenKind::Space => {
-                    if !newline {
-                        // ignore
-                    } else if self.indent_style == IndentStyle::Unknown {
-                        self.indent_style = IndentStyle::Space;
-                    } else if self.indent_style == IndentStyle::Tab {
-                        self.error("inconsistent-indentation",
-                                "expected a tab, but found a space");
+                    if newline {
+                        self.error("prefer-tab-indent",
+                                "indents should use tabs, but found a space");
+                        if self.indent_style == IndentStyle::Unknown {
+                            self.indent_style = IndentStyle::Space;
+                        } else if self.indent_style == IndentStyle::Tab {
+                            self.error("inconsistent-indent",
+                                    "expected a tab, but found a space");
+                        }
                     }
                 },
                 TokenKind::DirectiveAllow => {
@@ -283,7 +289,7 @@ impl<'a> Checker<'a> {
 
 fn directive_enabled_by_default(directive : &str) -> bool {
     matches!(directive,
-            "banned-functions" | "inconsistent-indentation" |
+            "banned-functions" | "inconsistent-indent" |
             "bad-tab-style")
 }
 
