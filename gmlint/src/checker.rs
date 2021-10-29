@@ -168,33 +168,40 @@ impl<'a> Checker<'a> {
                 directives, error_count, visited_directives }
     }
 
+    /// Returns a reference to the current span.
+    pub fn span(&self) -> &Span {
+        &self.peeked_span
+    }
+
     /// Returns the substring of the current span.
     pub fn substring(&self) -> &'a str {
-        self.peeked_span.render(self.src)
+        self.span().render(self.src)
     }
 
     /// Displays an error.
-    pub fn error<T : fmt::Display>(&mut self, option : &str, reason : T) {
+    pub fn error<T : fmt::Display>(
+            &mut self,
+            option : &str,
+            span : &Span,
+            reason : T) {
         let enabled = matches!(self.directives.get(option), None | Some(true));
         if enabled == directive_enabled_by_default(option) {
             if self.error_count != 0 {
                 println!();
             }
             self.error_count += 1;
-            display_error(&self.peeked_span, &self.lines, self.src,
+            display_error(&span, &self.lines, self.src,
                     &self.filepath, option, reason,
                     &mut self.visited_directives);
         }
     }
 
     /// Skips whitespace and reports any changes in indentation.
-    /// Returns `None` if the end-of-file is reached.
-    pub fn generate_token(&mut self) -> Option<TokenKind> {
+    pub fn generate_token(&mut self) -> TokenKind {
         let mut newline = false;
-        let token = loop {
-            self.peeked_span = self.lexer.span().clone();
-            let token = mem::replace(
-                    &mut self.peeked, self.lexer.generate_token());
+        loop {
+            let span = self.lexer.span().clone();
+            let token = self.lexer.generate_token();
             match token {
                 TokenKind::EoL | TokenKind::BoF => {
                     newline = true;
@@ -202,27 +209,27 @@ impl<'a> Checker<'a> {
                 TokenKind::Comment | TokenKind::Other => (),
                 TokenKind::Tab => {
                     if newline {
-                        self.error("prefer-space-indent",
+                        self.error("prefer-space-indent", &span,
                                 "indents should use spaces, but found a tab");
                         if self.indent_style == IndentStyle::Unknown {
                             self.indent_style = IndentStyle::Tab;
                         } else if self.indent_style == IndentStyle::Space {
-                            self.error("inconsistent-indent",
+                            self.error("inconsistent-indent", &span,
                                     "expected a space, but found a tab");
                         }
                     } else {
-                        self.error("bad-tab-style",
+                        self.error("bad-tab-style", &span,
                                 "tab is used here when it shouldn't be");
                     }
                 },
                 TokenKind::Space => {
                     if newline {
-                        self.error("prefer-tab-indent",
+                        self.error("prefer-tab-indent", &span,
                                 "indents should use tabs, but found a space");
                         if self.indent_style == IndentStyle::Unknown {
                             self.indent_style = IndentStyle::Space;
                         } else if self.indent_style == IndentStyle::Tab {
-                            self.error("inconsistent-indent",
+                            self.error("inconsistent-indent", &span,
                                     "expected a tab, but found a space");
                         }
                     }
@@ -240,13 +247,43 @@ impl<'a> Checker<'a> {
                 },
                 _ => break token,
             }
-        };
-        if matches!(token, TokenKind::EoF) {
-            None
-        } else {
-            Some(token)
         }
     }
+
+    /// Advances the parser and returns the previous token.
+    pub fn advance(&mut self) -> TokenKind {
+        self.peeked_span = self.lexer.span().clone();
+        let next = self.generate_token();
+        mem::replace(&mut self.peeked, next)
+    }
+
+    /// Returns whether the current token satisfies a predicate `p`.
+    pub fn sat(&self, p : fn(&TokenKind) -> bool) -> bool {
+        p(&self.peeked)
+    }
+
+    /// Displays an error at the current span and returns `None`.
+    pub fn unexpected<T : fmt::Display, R>(
+            &mut self,
+            reason : T) -> Option<R> {
+        self.advance();
+        self.error("syntax-errors", &self.span().clone(), reason);
+        None
+    }
+
+    /// Returns the current token if it satisfies a predicate `p`.
+    /// Otherwise, an error is displayed at the current span.
+    pub fn expect<T : fmt::Display>(
+            &mut self,
+            p : fn(&TokenKind) -> bool,
+            reason : T) -> Option<TokenKind> {
+        if self.sat(p) {
+            Some(self.advance())
+        } else {
+            self.unexpected(reason)
+        }
+    }
+
 
     /// Runs the checks and consumes this checker.
     pub fn perform_checks(mut self) {
@@ -261,36 +298,43 @@ impl<'a> Checker<'a> {
     }
 
     /// Performs some checks for the program.
-    pub fn check_program(&mut self) -> Option<()> {
-        loop {
-            let token = self.generate_token()?;
-            match token {
-                TokenKind::Identifier => {
-                    let substring = self.substring();
-                    for (pattern, replacement) in &self.banned_functions {
-                        if pattern.matches(substring) {
-                            let message = if let Some(name) = replacement {
-                                format!(", instead use `{}`", name)
-                            } else {
-                                String::new()
-                            };
-                            self.error("banned-functions",
-                                    format!("accessing this variable is \
-                                            prohibited{}", message));
-                            break;
-                        }
-                    }
-                },
-                _ => (),
-            }
+    pub fn check_program(&mut self) {
+        while self.sat(|x| !matches!(x, TokenKind::EoF)) {
+            self.check_expr_terminal();
         }
     }
+
+    /// Analyses literals and identifiers.
+    pub fn check_expr_terminal(&mut self) -> Option<()> {
+        if self.sat(|x| matches!(x, TokenKind::Identifier)) {
+            self.advance();
+            let substring = self.substring();
+            let span = self.span().clone();
+            for (pattern, replacement) in &self.banned_functions {
+                if pattern.matches(substring) {
+                    let message = if let Some(name) = replacement {
+                        format!(", instead use `{}`", name)
+                    } else {
+                        String::new()
+                    };
+                    self.error("banned-functions", &span,
+                            format!("accessing this variable is \
+                                    prohibited{}", message));
+                    break;
+                }
+            }
+            Some(())
+        } else {
+            self.unexpected("unknown symbol in expression")
+        }
+    }
+
 }
 
 fn directive_enabled_by_default(directive : &str) -> bool {
     matches!(directive,
             "banned-functions" | "inconsistent-indent" |
-            "bad-tab-style")
+            "bad-tab-style" | "syntax-errors")
 }
 
 fn prospect_newlines(src : &str) -> Vec<Span> {
