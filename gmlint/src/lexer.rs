@@ -31,7 +31,6 @@ pub struct Lexer<'a> {
     src : &'a str,
     chars : CharIndices<'a>,
     current_char : Option<char>,
-    ignore_next_char : bool,
     directive_mode : bool,
     span : Span,
 }
@@ -41,11 +40,10 @@ impl<'a> Lexer<'a> {
     pub fn new(src : &'a str) -> Self {
         let mut chars = src.char_indices();
         let current_char = chars.next().map(|x| x.1);
-        let ignore_next_char = false;
         let directive_mode = false;
         let span = Span::default();
         Self { src, chars, current_char,
-                ignore_next_char, directive_mode, span }
+                directive_mode, span }
     }
 
     /// Returns a reference to the current span.
@@ -108,10 +106,6 @@ impl<'a> Lexer<'a> {
 
     /// Advances the lexer and returns the next `TokenKind`.
     pub fn generate_token(&mut self) -> TokenKind {
-        if self.ignore_next_char {
-            self.advance();
-            self.ignore_next_char = false;
-        }
         self.clear_span();
         if let Some(c) = self.advance() {
             if is_newline(&c) {
@@ -328,7 +322,7 @@ impl<'a> Lexer<'a> {
                             if self.sat(|x| matches!(x, '\\')) {
                                 self.advance();
                             } else if self.sat(|x| matches!(x, '"')) {
-                                self.ignore_next_char = true;
+                                self.advance();
                                 break TokenKind::Str { unclosed : false };
                             }
                             if let None = self.advance() {
@@ -340,7 +334,7 @@ impl<'a> Lexer<'a> {
                         self.advance();
                         loop {
                             if self.sat(|x| matches!(x, '\'')) {
-                                self.ignore_next_char = true;
+                                self.advance();
                                 break TokenKind::Str { unclosed : false };
                             }
                             if let None = self.advance() {
