@@ -55,6 +55,8 @@ pub enum TokenKind {
     Tilde,
     Hash,
     Hook,
+    HookHook,
+    HookHookEquals,
     Dollar,
     And,
     Or,
@@ -76,6 +78,7 @@ pub enum TokenKind {
     Break,
     Continue,
     Function,
+    Constructor,
     Return,
     Identifier,
     Number {

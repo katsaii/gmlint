@@ -73,6 +73,16 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Returns `true` if the current character equals an expected character.
+    /// The function will always return `false` when at the end of the file.
+    pub fn sat_char(&self, expect : char) -> bool {
+        if let Some(x) = &self.current_char {
+            expect == *x
+        } else {
+            false
+        }
+    }
+
     /// Advances the lexer and returns the previous character.
     pub fn advance(&mut self) -> Option<char> {
         let future_char = if let Some((i, c)) = self.chars.next() {
@@ -130,21 +140,60 @@ impl<'a> Lexer<'a> {
                 }
             } else {
                 match c {
-                    '/' => if self.sat(|x| matches!(x, '/')) {
+                    '(' => TokenKind::LeftParen,
+                    ')' => TokenKind::RightParen,
+                    '{' => TokenKind::LeftBrace,
+                    '}' => TokenKind::RightBrace,
+                    '[' => TokenKind::LeftBox,
+                    ']' => TokenKind::RightBox,
+                    ':' => if self.sat_char('=') {
                         self.advance();
-                        if self.sat(|x| matches!(x, '#')) {
+                        TokenKind::ColonEquals
+                    } else {
+                        TokenKind::Colon
+                    },
+                    ';' => TokenKind::SemiColon,
+                    ',' => TokenKind::Comma,
+                    '.' => TokenKind::Dot,
+                    '+' => if self.sat_char('+') {
+                        self.advance();
+                        TokenKind::PlusPlus
+                    } else if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::PlusEquals
+                    } else {
+                        TokenKind::Plus
+                    },
+                    '-' => if self.sat_char('-') {
+                        self.advance();
+                        TokenKind::MinusMinus
+                    } else if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::MinusEquals
+                    } else {
+                        TokenKind::Minus
+                    },
+                    '*' => if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::AsteriskEquals
+                    } else {
+                        TokenKind::Asterisk
+                    },
+                    '/' => if self.sat_char('/') {
+                        self.advance();
+                        if self.sat_char('#') {
                             self.directive_mode = true;
                             self.generate_token()
                         } else {
                             self.advance_while(|x| !is_newline(x));
                             TokenKind::Comment
                         }
-                    } else if self.sat(|x| matches!(x, '*')) {
+                    } else if self.sat_char('*') {
                         self.advance();
                         loop {
-                            if self.sat(|x| matches!(x, '*')) {
+                            if self.sat_char('*') {
                                 self.advance();
-                                if self.sat(|x| matches!(x, '/')) {
+                                if self.sat_char('/') {
                                     self.advance();
                                     break TokenKind::Comment;
                                 }
@@ -152,17 +201,113 @@ impl<'a> Lexer<'a> {
                                 break TokenKind::Comment;
                             }
                         }
+                    } else if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::SolidusEquals
                     } else {
-                        TokenKind::Other
+                        TokenKind::Solidus
                     },
-                    '(' => TokenKind::LeftParen,
-                    ')' => TokenKind::RightParen,
-                    '{' => TokenKind::LeftBrace,
-                    '}' => TokenKind::RightBrace,
-                    '[' => TokenKind::LeftBox,
-                    ']' => TokenKind::RightBox,
-                    '.' => TokenKind::Dot,
+                    '%' => if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::PercentEquals
+                    } else {
+                        TokenKind::Percent
+                    },
+                    '<' => if self.sat_char('<') {
+                        self.advance();
+                        if self.sat_char('=') {
+                            self.advance();
+                            TokenKind::LessLessEquals
+                        } else {
+                            TokenKind::LessLess
+                        }
+                    } else if self.sat_char('>') {
+                        self.advance();
+                        TokenKind::LessGreater
+                    } else if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::LessEquals
+                    } else {
+                        TokenKind::Less
+                    },
+                    '>' => if self.sat_char('>') {
+                        self.advance();
+                        if self.sat_char('=') {
+                            self.advance();
+                            TokenKind::GreaterGreaterEquals
+                        } else {
+                            TokenKind::GreaterGreater
+                        }
+                    } else if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::GreaterEquals
+                    } else {
+                        TokenKind::Greater
+                    },
+                    '=' => if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::EqualsEquals
+                    } else {
+                        TokenKind::Equals
+                    },
+                    '!' => if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::BangEquals
+                    } else {
+                        TokenKind::Bang
+                    },
+                    '&' => if self.sat_char('&') {
+                        self.advance();
+                        if self.sat_char('=') {
+                            TokenKind::AmpersandAmpersandEquals
+                        } else {
+                            TokenKind::AmpersandAmpersand
+                        }
+                    } else if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::AmpersandEquals
+                    } else {
+                        TokenKind::Ampersand
+                    },
+                    '|' => if self.sat_char('|') {
+                        self.advance();
+                        if self.sat_char('=') {
+                            TokenKind::BarBarEquals
+                        } else {
+                            TokenKind::BarBar
+                        }
+                    } else if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::BarEquals
+                    } else {
+                        TokenKind::Bar
+                    },
+                    '^' => if self.sat_char('^') {
+                        self.advance();
+                        if self.sat_char('=') {
+                            TokenKind::CaretCaretEquals
+                        } else {
+                            TokenKind::CaretCaret
+                        }
+                    } else if self.sat_char('=') {
+                        self.advance();
+                        TokenKind::CaretEquals
+                    } else {
+                        TokenKind::Caret
+                    },
+                    '~' => TokenKind::Tilde,
                     '#' => TokenKind::Hash,
+                    '?' => if self.sat_char('?') {
+                        self.advance();
+                        if self.sat_char('=') {
+                            TokenKind::HookHookEquals
+                        } else {
+                            TokenKind::HookHook
+                        }
+                    } else {
+                        TokenKind::Hook
+                    },
+                    '$' => TokenKind::Dollar,
                     '"' => {
                         loop {
                             if self.sat(|x| matches!(x, '\\')) {
@@ -192,10 +337,35 @@ impl<'a> Lexer<'a> {
                     },
                     x if is_ascii_graphic(&x) => {
                         self.advance_while(is_ascii_graphic);
-                        if matches!(self.substring(), "var" | "static") {
-                            TokenKind::VarDecl
-                        } else {
-                            TokenKind::Identifier
+                        match self.substring() {
+                            "and" => TokenKind::And,
+                            "or" => TokenKind::Or,
+                            "xor" => TokenKind::Xor,
+                            "mod" => TokenKind::Mod,
+                            "div" => TokenKind::Div,
+                            "var" => TokenKind::Var,
+                            "static" => TokenKind::Static,
+                            "globalvar" => TokenKind::Globalvar,
+                            "if" => TokenKind::If,
+                            "then" => TokenKind::Then,
+                            "else" => TokenKind::Else,
+                            "for" => TokenKind::For,
+                            "while" => TokenKind::While,
+                            "do" => TokenKind::Do,
+                            "until" => TokenKind::Until,
+                            "repeat" => TokenKind::Repeat,
+                            "with" => TokenKind::With,
+                            "break" => TokenKind::Break,
+                            "continue" => TokenKind::Continue,
+                            "function" => TokenKind::Function,
+                            "constructor" => TokenKind::Constructor,
+                            "return" => TokenKind::Return,
+                            "true" => TokenKind::True,
+                            "false" => TokenKind::False,
+                            "infinity" => TokenKind::Infinity,
+                            "NaN" => TokenKind::NaN,
+                            "undefined" => TokenKind::Undefined,
+                            _ => TokenKind::Identifier,
                         }
                     },
                     _ => TokenKind::Other,
