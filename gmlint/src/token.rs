@@ -53,6 +53,7 @@ pub enum TokenKind {
     CaretCaret,
     CaretCaretEquals,
     Tilde,
+    Address,
     Hash,
     Hook,
     HookHook,

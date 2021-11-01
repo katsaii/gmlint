@@ -316,21 +316,29 @@ impl<'a> Lexer<'a> {
                                 self.advance();
                             } else if self.sat(|x| matches!(x, '"')) {
                                 self.ignore_next_char = true;
-                                break TokenKind::Other;
+                                break TokenKind::Str { unclosed : false };
                             }
                             if let None = self.advance() {
-                                break TokenKind::Other;
+                                break TokenKind::Str { unclosed : true };
                             }
                         }
                     },
-                    '@' if self.sat(|x| matches!(x, '\'')) => {
+                    '@' => if self.sat_char('\'') {
                         self.advance();
-                        self.advance_while(|x| !matches!(x, '\''));
-                        self.ignore_next_char = true;
-                        TokenKind::Other
+                        loop {
+                            if self.sat(|x| matches!(x, '\'')) {
+                                self.ignore_next_char = true;
+                                break TokenKind::Str { unclosed : false };
+                            }
+                            if let None = self.advance() {
+                                break TokenKind::Str { unclosed : true };
+                            }
+                        }
+                    } else {
+                        TokenKind::Address
                     },
                     x if is_ascii_digit(&x) => {
-                        if matches!(x, '0') && self.sat(|x| matches!(x, 'x')) {
+                        if matches!(x, '0') && self.sat_char('x') {
                             self.advance_while(is_hex_digit);
                         } else {
                             self.advance_while(is_ascii_digit);
