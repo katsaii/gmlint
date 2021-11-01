@@ -186,7 +186,7 @@ impl<'a> Lexer<'a> {
                             self.generate_token()
                         } else {
                             self.advance_while(|x| !is_newline(x));
-                            TokenKind::Comment
+                            TokenKind::Comment { unclosed : false }
                         }
                     } else if self.sat_char('*') {
                         self.advance();
@@ -195,10 +195,12 @@ impl<'a> Lexer<'a> {
                                 self.advance();
                                 if self.sat_char('/') {
                                     self.advance();
-                                    break TokenKind::Comment;
+                                    break TokenKind::Comment {
+                                        unclosed : false,
+                                    };
                                 }
                             } else if let None = self.advance() {
-                                break TokenKind::Comment;
+                                break TokenKind::Comment { unclosed : true };
                             }
                         }
                     } else if self.sat_char('=') {

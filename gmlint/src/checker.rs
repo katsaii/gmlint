@@ -206,7 +206,12 @@ impl<'a> Checker<'a> {
                 TokenKind::EoL | TokenKind::BoF => {
                     newline = true;
                 },
-                TokenKind::Comment | TokenKind::Other => (),
+                TokenKind::Comment { unclosed } => {
+                    if unclosed {
+                        self.error("unclosed-comment", &span,
+                                "multi-line comment is never terminated");
+                    }
+                },
                 TokenKind::Tab => {
                     if newline {
                         self.error("prefer-space-indent", &span,
@@ -245,6 +250,10 @@ impl<'a> Checker<'a> {
                     self.directives.insert(
                             directive.to_string(), self.directive_warn);
                 },
+                TokenKind::Other => {
+                    self.error("invalid-character", &span,
+                            "invalid character sequence found");
+                }
                 _ => break token,
             }
         }

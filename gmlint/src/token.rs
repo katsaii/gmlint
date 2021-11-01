@@ -93,7 +93,9 @@ pub enum TokenKind {
     Infinity,
     NaN,
     Undefined,
-    Comment,
+    Comment {
+        unclosed : bool,
+    },
     Space,
     Tab,
     EoL,
