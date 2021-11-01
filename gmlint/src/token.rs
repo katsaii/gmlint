@@ -83,8 +83,11 @@ pub enum TokenKind {
     Return,
     Identifier,
     Number {
-        missing_while : bool,
-        missing_fraction : bool,
+        missing_integral : bool,
+        missing_fractional : bool,
+    },
+    NumberHex {
+        delphi_style : bool,
     },
     Str {
         unclosed : bool,

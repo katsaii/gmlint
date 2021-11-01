@@ -154,7 +154,15 @@ impl<'a> Lexer<'a> {
                     },
                     ';' => TokenKind::SemiColon,
                     ',' => TokenKind::Comma,
-                    '.' => TokenKind::Dot,
+                    '.' => if self.sat(is_ascii_digit) {
+                        self.advance_while(is_ascii_digit);
+                        TokenKind::Number {
+                            missing_integral : true,
+                            missing_fractional : false,
+                        }
+                    } else {
+                        TokenKind::Dot
+                    },
                     '+' => if self.sat_char('+') {
                         self.advance();
                         TokenKind::PlusPlus
@@ -309,7 +317,12 @@ impl<'a> Lexer<'a> {
                     } else {
                         TokenKind::Hook
                     },
-                    '$' => TokenKind::Dollar,
+                    '$' => if self.sat(is_hex_digit) {
+                        self.advance_while(is_hex_digit);
+                        TokenKind::NumberHex { delphi_style : true }
+                    } else {
+                        TokenKind::Dollar
+                    },
                     '"' => {
                         loop {
                             if self.sat(|x| matches!(x, '\\')) {
@@ -340,10 +353,27 @@ impl<'a> Lexer<'a> {
                     x if is_ascii_digit(&x) => {
                         if matches!(x, '0') && self.sat_char('x') {
                             self.advance_while(is_hex_digit);
+                            TokenKind::NumberHex { delphi_style : false }
                         } else {
                             self.advance_while(is_ascii_digit);
+                            if self.sat_char('.') {
+                                self.advance();
+                                let missing_fractional =
+                                        !self.sat(is_ascii_digit);
+                                if !missing_fractional {
+                                    self.advance_while(is_ascii_digit);
+                                }
+                                TokenKind::Number {
+                                    missing_integral : false,
+                                    missing_fractional,
+                                }
+                            } else {
+                                TokenKind::Number {
+                                    missing_integral : false,
+                                    missing_fractional : false,
+                                }
+                            }
                         }
-                        TokenKind::Other
                     },
                     x if is_ascii_graphic(&x) => {
                         self.advance_while(is_ascii_graphic);
