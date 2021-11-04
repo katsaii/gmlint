@@ -309,8 +309,13 @@ impl<'a> Checker<'a> {
     /// Performs some checks for the program.
     pub fn check_program(&mut self) {
         while self.sat(|x| !matches!(x, TokenKind::EoF)) {
-            self.check_expr_terminal();
+            self.check_expr();
         }
+    }
+
+    /// Analyses expressions.
+    pub fn check_expr(&mut self) -> Option<()> {
+        self.check_expr_terminal()
     }
 
     /// Analyses literals and identifiers.
@@ -334,7 +339,20 @@ impl<'a> Checker<'a> {
             }
             Some(())
         } else {
-            self.unexpected("unknown symbol in expression")
+            self.check_expr_grouping()
+        }
+    }
+
+    /// Analyses groupings of expressions.
+    pub fn check_expr_grouping(&mut self) -> Option<()> {
+        if self.sat(|x| matches!(x, TokenKind::LeftParen)) {
+            self.advance();
+            self.check_expr()?;
+            self.expect(|x| matches!(x, TokenKind::RightParen),
+                    "expected a closing `)` here")?;
+            Some(())
+        } else {
+            self.unexpected("unexpected symbol in expression")
         }
     }
 
