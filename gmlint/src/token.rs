@@ -69,6 +69,8 @@ pub enum TokenKind {
     Globalvar,
     If,
     Then,
+    Begin,
+    End,
     Else,
     For,
     While,

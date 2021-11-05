@@ -382,6 +382,8 @@ impl<'a> Lexer<'a> {
                             "globalvar" => TokenKind::Globalvar,
                             "if" => TokenKind::If,
                             "then" => TokenKind::Then,
+                            "begin" => TokenKind::Begin,
+                            "end" => TokenKind::End,
                             "else" => TokenKind::Else,
                             "for" => TokenKind::For,
                             "while" => TokenKind::While,

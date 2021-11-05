@@ -207,7 +207,7 @@ impl<'a> Checker<'a> {
         let mut newline = false;
         loop {
             let span = self.lexer.span().clone();
-            let token = self.lexer.generate_token();
+            let mut token = self.lexer.generate_token();
             match token {
                 TokenKind::EoL | TokenKind::BoF => {
                     newline = true;
@@ -282,6 +282,10 @@ impl<'a> Checker<'a> {
                                 self.error("delphi-syntax", &span,
                                         "instead of `$` for hexadecimal \
                                         literals, you should use `0x`");
+                            } else {
+                                self.error("c-syntax", &span,
+                                        "instead of `0x` for hexadecimal \
+                                        literals, you should use `$`");
                             }
                         },
                         TokenKind::Str { unclosed } => {
@@ -290,6 +294,33 @@ impl<'a> Checker<'a> {
                                         "missing a closing quote in this \
                                         string");
                             }
+                        },
+                        TokenKind::Equals => {
+                            self.error("c-syntax", &span,
+                                    "instead of `=`, you should use `:=`");
+                        },
+                        TokenKind::LeftBrace => {
+                            self.error("c-syntax", &span,
+                                    "instead of `{`, you should use `begin`");
+                        },
+                        TokenKind::RightBrace => {
+                            self.error("c-syntax", &span,
+                                    "instead of `}`, you should use `begin`");
+                        },
+                        TokenKind::ColonEquals => {
+                            self.error("delphi-syntax", &span,
+                                    "instead of `:=`, you should use `=`");
+                            token = TokenKind::Equals;
+                        },
+                        TokenKind::Begin => {
+                            self.error("delphi-syntax", &span,
+                                    "instead of `begin`, you should use `{`");
+                            token = TokenKind::LeftBrace;
+                        },
+                        TokenKind::End => {
+                            self.error("delphi-syntax", &span,
+                                    "instead of `end`, you should use `}`");
+                            token = TokenKind::RightBrace;
                         },
                         _ => (),
                     }
@@ -406,7 +437,6 @@ impl<'a> Checker<'a> {
         self.check_expr()?;
         if self.sat(rule!(
                 TokenKind::Equals
-                | TokenKind::ColonEquals
                 | TokenKind::PlusEquals
                 | TokenKind::MinusEquals
                 | TokenKind::AsteriskEquals
