@@ -11,6 +11,10 @@ use yaml_rust::YamlLoader;
 use gitignore::File as IgnoreFile;
 use glob::Pattern;
 
+macro_rules! rule {
+    ($($p:pat)|*) => { |x| matches!(x, $($p)|*) }
+}
+
 /// Searches a file with this filename, but one of an array of file
 /// extensions.
 pub fn read_to_string_with_extension<P : AsRef<Path>>(
@@ -308,7 +312,7 @@ impl<'a> Checker<'a> {
 
     /// Performs some checks for the program.
     pub fn check_program(&mut self) {
-        while !self.sat(|x| matches!(x, TokenKind::EoF)) {
+        while !self.sat(rule!(TokenKind::EoF)) {
             self.check_expr();
         }
     }
@@ -320,7 +324,7 @@ impl<'a> Checker<'a> {
 
     /// Analyses literals and identifiers.
     pub fn check_expr_terminal(&mut self) -> Option<()> {
-        if self.sat(|x| matches!(x, TokenKind::Identifier)) {
+        if self.sat(rule!(TokenKind::Identifier)) {
             self.advance();
             let substring = self.substring();
             let span = self.span().clone();
@@ -345,19 +349,19 @@ impl<'a> Checker<'a> {
 
     /// Analyses groupings of expressions.
     pub fn check_expr_grouping(&mut self) -> Option<()> {
-        if self.sat(|x| matches!(x, TokenKind::LeftParen)) {
+        if self.sat(rule!(TokenKind::LeftParen)) {
             self.advance();
             self.check_expr()?;
-            self.expect(|x| matches!(x, TokenKind::RightParen),
+            self.expect(rule!(TokenKind::RightParen),
                     "expected a closing `)` here")?;
             Some(())
-        } else if self.sat(|x| matches!(x, TokenKind::LeftBox)) {
+        } else if self.sat(rule!(TokenKind::LeftBox)) {
             self.advance();
-            if !self.sat(|x| matches!(x, TokenKind::RightBox)) {
+            if !self.sat(rule!(TokenKind::RightBox)) {
                 loop {
                     self.check_expr()?;
                     let mut has_comma = false;
-                    while self.sat(|x| matches!(x, TokenKind::Comma)) {
+                    while self.sat(rule!(TokenKind::Comma)) {
                         self.advance();
                         has_comma = true;
                     }
@@ -366,10 +370,10 @@ impl<'a> Checker<'a> {
                     }
                 }
             }
-            self.expect(|x| matches!(x, TokenKind::RightBox),
+            self.expect(rule!(TokenKind::RightBox),
                     "expected a closing `]` here")?;
             Some(())
-        } else if self.sat(|x| matches!(x, TokenKind::LeftBrace)) {
+        } else if self.sat(rule!(TokenKind::LeftBrace)) {
             self.unexpected("unimplemented")
         } else {
             self.unexpected("unexpected symbol in expression")
