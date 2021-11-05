@@ -167,9 +167,11 @@ impl<'a> Checker<'a> {
                 .map(|x| x.clone())
                 .collect();
         let error_count = 0;
-        Self { filepath, src, lines, lexer, peeked, peeked_span,
+        let mut checker = Self { filepath, src, lines, lexer, peeked, peeked_span,
                 banned_functions, directive_warn, indent_style,
-                directives, error_count, visited_directives }
+                directives, error_count, visited_directives };
+        checker.advance(); // skip BoF token
+        checker
     }
 
     /// Returns a reference to the current span.
@@ -277,7 +279,7 @@ impl<'a> Checker<'a> {
                         },
                         TokenKind::NumberHex { delphi_style } => {
                             if *delphi_style {
-                                self.error("delphi-hex-prefix", &span,
+                                self.error("delphi-syntax", &span,
                                         "instead of `$` for hexadecimal \
                                         literals, you should use `0x`");
                             }
@@ -331,6 +333,47 @@ impl<'a> Checker<'a> {
         }
     }
 
+    /// Advances the lexer if the current token is a semicolon.
+    /// Otherwise, an error is displayed at the current span.
+    pub fn expect_semicolon<T : fmt::Display>(&mut self, reason : T) {
+        if self.sat(rule!(TokenKind::SemiColon)) {
+            self.advance();
+        } else {
+            self.error("implicit-semicolons", &self.span().clone(),
+                    format!("expected a semicolon after {}",
+                            reason));
+        }
+    }
+
+    /// Recovers from an error by advancing the lexer to the start of a
+    /// statement.
+    pub fn recover(&mut self) {
+        loop {
+            if self.sat(rule!(
+                    TokenKind::EoF
+                    | TokenKind::Var
+                    | TokenKind::Static
+                    | TokenKind::Globalvar
+                    | TokenKind::If
+                    | TokenKind::For
+                    | TokenKind::While
+                    | TokenKind::Do
+                    | TokenKind::Repeat
+                    | TokenKind::With
+                    | TokenKind::Break
+                    | TokenKind::Continue
+                    | TokenKind::Function
+                    | TokenKind::Return
+                    | TokenKind::Identifier)) {
+                break;
+            } else if self.sat(rule!(
+                    TokenKind::SemiColon)) {
+                self.advance();
+                break;
+            }
+            self.advance();
+        }
+    }
 
     /// Runs the checks and consumes this checker.
     pub fn perform_checks(mut self) {
@@ -347,9 +390,44 @@ impl<'a> Checker<'a> {
     /// Performs some checks for the program.
     pub fn check_program(&mut self) {
         while !self.sat(rule!(TokenKind::EoF)) {
-            self.check_expr();
-            println!("hi {:?}", self.peeked);
+            if let None = self.check_stmt() {
+                self.recover();
+            }
         }
+    }
+
+    /// Analyses statements.
+    pub fn check_stmt(&mut self) -> Option<()> {
+        self.check_stmt_expr()
+    }
+
+    /// Analyses expression statements.
+    pub fn check_stmt_expr(&mut self) -> Option<()> {
+        self.check_expr()?;
+        if self.sat(rule!(
+                TokenKind::Equals
+                | TokenKind::ColonEquals
+                | TokenKind::PlusEquals
+                | TokenKind::MinusEquals
+                | TokenKind::AsteriskEquals
+                | TokenKind::SolidusEquals
+                | TokenKind::PercentEquals
+                | TokenKind::LessLessEquals
+                | TokenKind::GreaterGreaterEquals
+                | TokenKind::AmpersandEquals
+                | TokenKind::AmpersandAmpersandEquals
+                | TokenKind::BarEquals
+                | TokenKind::BarBarEquals
+                | TokenKind::CaretEquals
+                | TokenKind::CaretCaretEquals
+                | TokenKind::HookHookEquals)) {
+            self.advance();
+            self.check_expr()?;
+            self.expect_semicolon("after assignment statements");
+        } else {
+            self.expect_semicolon("after expression statements");
+        }
+        Some(())
     }
 
     /// Analyses expressions.
@@ -431,7 +509,8 @@ impl<'a> Checker<'a> {
 fn directive_enabled_by_default(directive : &str) -> bool {
     matches!(directive,
             "banned-functions" | "inconsistent-indent" |
-            "bad-tab-style" | "syntax-errors")
+            "bad-tab-style" | "syntax-errors" | "implicit-semicolons" |
+            "delphi-syntax")
 }
 
 fn prospect_newlines(src : &str) -> Vec<Span> {
