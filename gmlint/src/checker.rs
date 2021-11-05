@@ -308,7 +308,7 @@ impl<'a> Checker<'a> {
 
     /// Performs some checks for the program.
     pub fn check_program(&mut self) {
-        while self.sat(|x| !matches!(x, TokenKind::EoF)) {
+        while !self.sat(|x| matches!(x, TokenKind::EoF)) {
             self.check_expr();
         }
     }
@@ -351,6 +351,26 @@ impl<'a> Checker<'a> {
             self.expect(|x| matches!(x, TokenKind::RightParen),
                     "expected a closing `)` here")?;
             Some(())
+        } else if self.sat(|x| matches!(x, TokenKind::LeftBox)) {
+            self.advance();
+            if !self.sat(|x| matches!(x, TokenKind::RightBox)) {
+                loop {
+                    self.check_expr()?;
+                    let mut has_comma = false;
+                    while self.sat(|x| matches!(x, TokenKind::Comma)) {
+                        self.advance();
+                        has_comma = true;
+                    }
+                    if !has_comma {
+                        break;
+                    }
+                }
+            }
+            self.expect(|x| matches!(x, TokenKind::RightBox),
+                    "expected a closing `]` here")?;
+            Some(())
+        } else if self.sat(|x| matches!(x, TokenKind::LeftBrace)) {
+            self.unexpected("unimplemented")
         } else {
             self.unexpected("unexpected symbol in expression")
         }
