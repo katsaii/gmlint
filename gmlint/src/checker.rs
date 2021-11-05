@@ -258,7 +258,41 @@ impl<'a> Checker<'a> {
                     self.error("invalid-character", &span,
                             "invalid character sequence found");
                 }
-                _ => break token,
+                _ => {
+                    match &token {
+                        TokenKind::Number {
+                                missing_integral, missing_fractional } => {
+                            if *missing_integral {
+                                self.error("float-missing-integral", &span,
+                                        "an explicit `0` should be included \
+                                        before the decimal point of this \
+                                        number");
+                            }
+                            if *missing_fractional {
+                                self.error("float-missing-fractional", &span,
+                                        "an explicit `0` should be included \
+                                        after the decimal point of this \
+                                        number");
+                            }
+                        },
+                        TokenKind::NumberHex { delphi_style } => {
+                            if *delphi_style {
+                                self.error("delphi-hex-prefix", &span,
+                                        "instead of `$` for hexadecimal \
+                                        literals, you should use `0x`");
+                            }
+                        },
+                        TokenKind::Str { unclosed } => {
+                            if *unclosed {
+                                self.error("unclosed-string", &span,
+                                        "missing a closing quote in this \
+                                        string");
+                            }
+                        },
+                        _ => (),
+                    }
+                    break token;
+                },
             }
         }
     }
@@ -314,6 +348,7 @@ impl<'a> Checker<'a> {
     pub fn check_program(&mut self) {
         while !self.sat(rule!(TokenKind::EoF)) {
             self.check_expr();
+            println!("hi {:?}", self.peeked);
         }
     }
 
@@ -341,6 +376,17 @@ impl<'a> Checker<'a> {
                     break;
                 }
             }
+            Some(())
+        } else if self.sat(rule!(
+                TokenKind::Number { .. }
+                | TokenKind::NumberHex { .. }
+                | TokenKind::Str { .. }
+                | TokenKind::True
+                | TokenKind::False
+                | TokenKind::Infinity
+                | TokenKind::NaN
+                | TokenKind::Undefined)) {
+            self.advance();
             Some(())
         } else {
             self.check_expr_grouping()
